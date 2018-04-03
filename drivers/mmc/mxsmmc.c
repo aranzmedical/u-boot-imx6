@@ -20,12 +20,12 @@
 #include <common.h>
 #include <malloc.h>
 #include <mmc.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
-#include <asm/imx-common/dma.h>
+#include <asm/mach-imx/dma.h>
 #include <bouncebuf.h>
 
 struct mxsmmc_priv {
@@ -35,6 +35,7 @@ struct mxsmmc_priv {
 	int			(*mmc_is_wp)(int);
 	int			(*mmc_cd)(int);
 	struct mxs_dma_desc	*desc;
+	struct mmc_config	cfg;	/* mmc configuration */
 };
 
 #define	MXSMMC_MAX_TIMEOUT	10000
@@ -83,7 +84,7 @@ static int mxsmmc_send_cmd_pio(struct mxsmmc_priv *priv, struct mmc_data *data)
 		}
 	}
 
-	return timeout ? 0 : COMM_ERR;
+	return timeout ? 0 : -ECOMM;
 }
 
 static int mxsmmc_send_cmd_dma(struct mxsmmc_priv *priv, struct mmc_data *data)
@@ -119,7 +120,7 @@ static int mxsmmc_send_cmd_dma(struct mxsmmc_priv *priv, struct mmc_data *data)
 	mxs_dma_desc_append(dmach, priv->desc);
 	if (mxs_dma_go(dmach)) {
 		bounce_buffer_stop(&bbstate);
-		return COMM_ERR;
+		return -ECOMM;
 	}
 
 	bounce_buffer_stop(&bbstate);
@@ -134,14 +135,14 @@ static int mxsmmc_send_cmd_dma(struct mxsmmc_priv *priv, struct mmc_data *data)
 static int
 mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 {
-	struct mxsmmc_priv *priv = (struct mxsmmc_priv *)mmc->priv;
+	struct mxsmmc_priv *priv = mmc->priv;
 	struct mxs_ssp_regs *ssp_regs = priv->regs;
 	uint32_t reg;
 	int timeout;
 	uint32_t ctrl0;
 	int ret;
 
-	debug("MMC%d: CMD%d\n", mmc->block_dev.dev, cmd->cmdidx);
+	debug("MMC%d: CMD%d\n", mmc->block_dev.devnum, cmd->cmdidx);
 
 	/* Check bus busy */
 	timeout = MXSMMC_MAX_TIMEOUT;
@@ -156,14 +157,14 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 	}
 
 	if (!timeout) {
-		printf("MMC%d: Bus busy timeout!\n", mmc->block_dev.dev);
-		return TIMEOUT;
+		printf("MMC%d: Bus busy timeout!\n", mmc->block_dev.devnum);
+		return -ETIMEDOUT;
 	}
 
 	/* See if card is present */
 	if (!mxsmmc_cd(priv)) {
-		printf("MMC%d: No card detected!\n", mmc->block_dev.dev);
-		return NO_CARD_ERR;
+		printf("MMC%d: No card detected!\n", mmc->block_dev.devnum);
+		return -ENOMEDIUM;
 	}
 
 	/* Start building CTRL0 contents */
@@ -199,10 +200,10 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 		if (data->flags & MMC_DATA_READ) {
 			ctrl0 |= SSP_CTRL0_READ;
 		} else if (priv->mmc_is_wp &&
-			priv->mmc_is_wp(mmc->block_dev.dev)) {
+			priv->mmc_is_wp(mmc->block_dev.devnum)) {
 			printf("MMC%d: Can not write a locked card!\n",
-				mmc->block_dev.dev);
-			return UNUSABLE_ERR;
+				mmc->block_dev.devnum);
+			return -EOPNOTSUPP;
 		}
 
 		ctrl0 |= SSP_CTRL0_DATA_XFER;
@@ -242,22 +243,22 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 
 	if (!timeout) {
 		printf("MMC%d: Command %d busy\n",
-			mmc->block_dev.dev, cmd->cmdidx);
-		return TIMEOUT;
+			mmc->block_dev.devnum, cmd->cmdidx);
+		return -ETIMEDOUT;
 	}
 
 	/* Check command timeout */
 	if (reg & SSP_STATUS_RESP_TIMEOUT) {
 		printf("MMC%d: Command %d timeout (status 0x%08x)\n",
-			mmc->block_dev.dev, cmd->cmdidx, reg);
-		return TIMEOUT;
+			mmc->block_dev.devnum, cmd->cmdidx, reg);
+		return -ETIMEDOUT;
 	}
 
 	/* Check command errors */
 	if (reg & (SSP_STATUS_RESP_CRC_ERR | SSP_STATUS_RESP_ERR)) {
 		printf("MMC%d: Command %d error (status 0x%08x)!\n",
-			mmc->block_dev.dev, cmd->cmdidx, reg);
-		return COMM_ERR;
+			mmc->block_dev.devnum, cmd->cmdidx, reg);
+		return -ECOMM;
 	}
 
 	/* Copy response to response buffer */
@@ -278,14 +279,14 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 		if (ret) {
 			printf("MMC%d: Data timeout with command %d "
 				"(status 0x%08x)!\n",
-				mmc->block_dev.dev, cmd->cmdidx, reg);
+				mmc->block_dev.devnum, cmd->cmdidx, reg);
 			return ret;
 		}
 	} else {
 		ret = mxsmmc_send_cmd_dma(priv, data);
 		if (ret) {
 			printf("MMC%d: DMA transfer failed\n",
-				mmc->block_dev.dev);
+				mmc->block_dev.devnum);
 			return ret;
 		}
 	}
@@ -296,16 +297,16 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 		(SSP_STATUS_TIMEOUT | SSP_STATUS_DATA_CRC_ERR |
 		SSP_STATUS_FIFO_OVRFLW | SSP_STATUS_FIFO_UNDRFLW)) {
 		printf("MMC%d: Data error with command %d (status 0x%08x)!\n",
-			mmc->block_dev.dev, cmd->cmdidx, reg);
-		return COMM_ERR;
+			mmc->block_dev.devnum, cmd->cmdidx, reg);
+		return -ECOMM;
 	}
 
 	return 0;
 }
 
-static void mxsmmc_set_ios(struct mmc *mmc)
+static int mxsmmc_set_ios(struct mmc *mmc)
 {
-	struct mxsmmc_priv *priv = (struct mxsmmc_priv *)mmc->priv;
+	struct mxsmmc_priv *priv = mmc->priv;
 	struct mxs_ssp_regs *ssp_regs = priv->regs;
 
 	/* Set the clock speed */
@@ -329,12 +330,14 @@ static void mxsmmc_set_ios(struct mmc *mmc)
 			SSP_CTRL0_BUS_WIDTH_MASK, priv->buswidth);
 
 	debug("MMC%d: Set %d bits bus width\n",
-		mmc->block_dev.dev, mmc->bus_width);
+		mmc->block_dev.devnum, mmc->bus_width);
+
+	return 0;
 }
 
 static int mxsmmc_init(struct mmc *mmc)
 {
-	struct mxsmmc_priv *priv = (struct mxsmmc_priv *)mmc->priv;
+	struct mxsmmc_priv *priv = mmc->priv;
 	struct mxs_ssp_regs *ssp_regs = priv->regs;
 
 	/* Reset SSP */
@@ -363,6 +366,12 @@ static int mxsmmc_init(struct mmc *mmc)
 	return 0;
 }
 
+static const struct mmc_ops mxsmmc_ops = {
+	.send_cmd	= mxsmmc_send_cmd,
+	.set_ios	= mxsmmc_set_ios,
+	.init		= mxsmmc_init,
+};
+
 int mxsmmc_initialize(bd_t *bis, int id, int (*wp)(int), int (*cd)(int))
 {
 	struct mmc *mmc = NULL;
@@ -373,20 +382,13 @@ int mxsmmc_initialize(bd_t *bis, int id, int (*wp)(int), int (*cd)(int))
 	if (!mxs_ssp_bus_id_valid(id))
 		return -ENODEV;
 
-	mmc = malloc(sizeof(struct mmc));
-	if (!mmc)
-		return -ENOMEM;
-
 	priv = malloc(sizeof(struct mxsmmc_priv));
-	if (!priv) {
-		free(mmc);
+	if (!priv)
 		return -ENOMEM;
-	}
 
 	priv->desc = mxs_dma_desc_alloc();
 	if (!priv->desc) {
 		free(priv);
-		free(mmc);
 		return -ENOMEM;
 	}
 
@@ -399,19 +401,13 @@ int mxsmmc_initialize(bd_t *bis, int id, int (*wp)(int), int (*cd)(int))
 	priv->id = id;
 	priv->regs = mxs_ssp_regs_by_bus(id);
 
-	sprintf(mmc->name, "MXS MMC");
-	mmc->send_cmd = mxsmmc_send_cmd;
-	mmc->set_ios = mxsmmc_set_ios;
-	mmc->init = mxsmmc_init;
-	mmc->getcd = NULL;
-	mmc->getwp = NULL;
-	mmc->priv = priv;
+	priv->cfg.name = "MXS MMC";
+	priv->cfg.ops = &mxsmmc_ops;
 
-	mmc->voltages = MMC_VDD_32_33 | MMC_VDD_33_34;
+	priv->cfg.voltages = MMC_VDD_32_33 | MMC_VDD_33_34;
 
-	mmc->host_caps = MMC_MODE_4BIT | MMC_MODE_8BIT |
-			 MMC_MODE_HS_52MHz | MMC_MODE_HS |
-			 MMC_MODE_HC;
+	priv->cfg.host_caps = MMC_MODE_4BIT | MMC_MODE_8BIT |
+			 MMC_MODE_HS_52MHz | MMC_MODE_HS;
 
 	/*
 	 * SSPCLK = 480 * 18 / 29 / 1 = 297.731 MHz
@@ -419,10 +415,15 @@ int mxsmmc_initialize(bd_t *bis, int id, int (*wp)(int), int (*cd)(int))
 	 * CLOCK_DIVIDE has to be an even value from 2 to 254, and
 	 * CLOCK_RATE could be any integer from 0 to 255.
 	 */
-	mmc->f_min = 400000;
-	mmc->f_max = mxc_get_clock(MXC_SSP0_CLK + mxsmmc_clk_id) * 1000 / 2;
-	mmc->b_max = 0x20;
+	priv->cfg.f_min = 400000;
+	priv->cfg.f_max = mxc_get_clock(MXC_SSP0_CLK + mxsmmc_clk_id) * 1000 / 2;
+	priv->cfg.b_max = 0x20;
 
-	mmc_register(mmc);
+	mmc = mmc_create(&priv->cfg, priv);
+	if (mmc == NULL) {
+		mxs_dma_desc_free(priv->desc);
+		free(priv);
+		return -ENOMEM;
+	}
 	return 0;
 }

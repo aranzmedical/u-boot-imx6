@@ -14,7 +14,7 @@
 #include <asm/io.h>
 #include <asm/cache.h>
 #include <asm/mmu.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <fdt_support.h>
 #include <pca953x.h>
 
@@ -70,11 +70,13 @@ int board_early_init_r(void)
 }
 
 #if defined(CONFIG_OF_BOARD_SETUP)
-void ft_board_setup(void *blob, bd_t *bd)
+int ft_board_setup(void *blob, bd_t *bd)
 {
 #ifdef CONFIG_PCI
 	ft_board_pci_setup(blob, bd);
 #endif
 	ft_cpu_setup(blob, bd);
+
+	return 0;
 }
 #endif

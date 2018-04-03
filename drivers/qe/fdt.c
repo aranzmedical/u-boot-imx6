@@ -8,10 +8,11 @@
  */
 
 #include <common.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <fdt_support.h>
-#include "qe.h"
+#include <fsl_qe.h>
 
+#ifdef CONFIG_QE
 DECLARE_GLOBAL_DATA_PTR;
 
 /*
@@ -72,3 +73,4 @@ void ft_qe_setup(void *blob)
 		"clock-frequency", gd->arch.qe_clk / 2, 1);
 	fdt_fixup_qe_firmware(blob);
 }
+#endif

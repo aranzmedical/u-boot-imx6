@@ -12,16 +12,8 @@
  * High Level Configuration Options
  * (easy to change)
  */
-#define CONFIG_SPEAR600
-
-#if defined(CONFIG_usbtty)
+#if defined(CONFIG_USBTTY)
 #define CONFIG_SPEAR_USBTTY
-#endif
-
-#if defined(CONFIG_nand)
-#define CONFIG_ENV_IS_IN_NAND
-#else
-#define CONFIG_ENV_IS_IN_FLASH
 #endif
 
 #include <configs/spear-common.h>
@@ -36,6 +28,9 @@
 #define CONFIG_SYS_FSMC_NAND_SP
 #define CONFIG_SYS_FSMC_NAND_8BIT
 #define CONFIG_SYS_NAND_BASE			0xD2000000
+
+/* Ethernet PHY configuration */
+#define CONFIG_PHY_NATSEMI
 
 /* Environment Settings */
 #define CONFIG_EXTRA_ENV_SETTINGS              CONFIG_EXTRA_ENV_USBTTY

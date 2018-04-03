@@ -6,6 +6,7 @@
  */
 
 #include <common.h>
+#include <console.h>
 #include <power/pmic.h>
 #include <power/battery.h>
 #include <power/max8997_pmic.h>
@@ -19,7 +20,7 @@ static int power_battery_charge(struct pmic *bat)
 	struct battery *battery = p_bat->bat;
 	int k;
 
-	if (bat->chrg->chrg_state(p_bat->chrg, CHARGER_ENABLE, 450))
+	if (bat->chrg->chrg_state(p_bat->chrg, PMIC_CHARGER_ENABLE, 450))
 		return -1;
 
 	for (k = 0; bat->chrg->chrg_bat_present(p_bat->chrg) &&
@@ -42,7 +43,7 @@ static int power_battery_charge(struct pmic *bat)
 		}
 	}
  exit:
-	bat->chrg->chrg_state(p_bat->chrg, CHARGER_DISABLE, 0);
+	bat->chrg->chrg_state(p_bat->chrg, PMIC_CHARGER_DISABLE, 0);
 
 	return 0;
 }

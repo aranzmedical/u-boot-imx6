@@ -18,25 +18,8 @@
 /* Freescale-specific PCI config registers */
 #define FSL_PCI_PBFR		0x44
 
-#ifdef CONFIG_SYS_FSL_PCI_VER_3_X
-/* Currently only the PCIe capability is used, so hardcode the offset.
- * if more capabilities need to be justified, the capability link method
- * should be applied here
- */
-#define FSL_PCIE_CAP_ID		0x70
-#define PCI_DCR		0x78    /* PCIe Device Control Register */
-#define PCI_DSR		0x7a    /* PCIe Device Status Register */
-#define PCI_LSR		0x82    /* PCIe Link Status Register */
-#define PCI_LCR		0x80    /* PCIe Link Control Register */
-#else
-#define FSL_PCIE_CAP_ID		0x4c
-#define PCI_DCR		0x54    /* PCIe Device Control Register */
-#define PCI_DSR		0x56    /* PCIe Device Status Register */
-#define PCI_LSR		0x5e    /* PCIe Link Status Register */
-#define PCI_LCR		0x5c    /* PCIe Link Control Register */
-#endif
-
 #define FSL_PCIE_CFG_RDY	0x4b0
+#define FSL_PCIE_V3_CFG_RDY	0x1
 #define FSL_PROG_IF_AGENT	0x1
 
 #define PCI_LTSSM	0x404   /* PCIe Link Training, Status State Machine */
@@ -96,7 +79,9 @@ typedef struct ccsr_pci {
 	u32	pme_msg_dis;	/* 0x024 - PCIE PME & message disable register */
 	u32	pme_msg_int_en;	/* 0x028 - PCIE PME & message interrupt enable register */
 	u32	pm_command;	/* 0x02c - PCIE PM Command register */
-	char	res4[3016];	/*     (- #xbf8	 #x30)3016 */
+	char	res3[2188];	/*     (0x8bc - 0x30 = 2188) */
+	u32	dbi_ro_wr_en;	/* 0x8bc - DBI read only write enable reg */
+	char	res4[824];	/*     (0xbf8 - 0x8c0 = 824) */
 	u32	block_rev1;	/* 0xbf8 - PCIE Block Revision register 1 */
 	u32	block_rev2;	/* 0xbfc - PCIE Block Revision register 2 */
 

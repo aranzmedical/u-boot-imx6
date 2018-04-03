@@ -4,7 +4,6 @@
 #ifndef __ARCH_PPC_CACHE_H
 #define __ARCH_PPC_CACHE_H
 
-#include <linux/config.h>
 #include <asm/processor.h>
 
 /* bytes per L1 cache line */
@@ -58,6 +57,12 @@ extern void unlock_ram_in_cache(void);
 #endif /* CONFIG_SYS_INIT_RAM_LOCK */
 #endif /* __ASSEMBLY__ */
 
+#if defined(__KERNEL__) && !defined(__ASSEMBLY__)
+int l2cache_init(void);
+void enable_cpc(void);
+void disable_cpc_sram(void);
+#endif
+
 /* prep registers for L2 */
 #define CACHECRBA       0x80000823      /* Cache configuration register address */
 #define L2CACHE_MASK	0x03	/* Mask for 2 L2 Cache bits */
@@ -102,6 +107,38 @@ extern void unlock_ram_in_cache(void);
 
 #define DC_DFWT		0x40000000	/* Data cache is forced write through */
 #define DC_LES		0x20000000	/* Caches are little endian mode */
+
+#if !defined(__ASSEMBLY__)
+static inline uint rd_ic_cst(void)
+{
+	return mfspr(IC_CST);
+}
+
+static inline void wr_ic_cst(uint val)
+{
+	mtspr(IC_CST, val);
+}
+
+static inline void wr_ic_adr(uint val)
+{
+	mtspr(IC_ADR, val);
+}
+
+static inline uint rd_dc_cst(void)
+{
+	return mfspr(DC_CST);
+}
+
+static inline void wr_dc_cst(uint val)
+{
+	mtspr(DC_CST, val);
+}
+
+static inline void wr_dc_adr(uint val)
+{
+	mtspr(DC_ADR, val);
+}
+#endif
 #endif /* CONFIG_8xx */
 
 #endif

@@ -13,10 +13,11 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/iomux-mx53.h>
 #include <asm/arch/clock.h>
-#include <asm/errno.h>
-#include <asm/imx-common/mx5_video.h>
+#include <linux/errno.h>
+#include <asm/mach-imx/mx5_video.h>
 #include <netdev.h>
 #include <i2c.h>
+#include <input.h>
 #include <mmc.h>
 #include <fsl_esdhc.h>
 #include <asm/gpio.h>
@@ -29,26 +30,6 @@
 #define MX53LOCO_LCD_POWER		IMX_GPIO_NR(3, 24)
 
 DECLARE_GLOBAL_DATA_PTR;
-
-int dram_init(void)
-{
-	u32 size1, size2;
-
-	size1 = get_ram_size((void *)PHYS_SDRAM_1, PHYS_SDRAM_1_SIZE);
-	size2 = get_ram_size((void *)PHYS_SDRAM_2, PHYS_SDRAM_2_SIZE);
-
-	gd->ram_size = size1 + size2;
-
-	return 0;
-}
-void dram_init_banksize(void)
-{
-	gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
-	gd->bd->bi_dram[0].size = PHYS_SDRAM_1_SIZE;
-
-	gd->bd->bi_dram[1].start = PHYS_SDRAM_2;
-	gd->bd->bi_dram[1].size = PHYS_SDRAM_2_SIZE;
-}
 
 u32 get_board_rev(void)
 {
@@ -169,7 +150,7 @@ int board_mmc_init(bd_t *bis)
 	};
 
 	u32 index;
-	s32 status = 0;
+	int ret;
 
 	esdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC_CLK);
 	esdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
@@ -188,12 +169,14 @@ int board_mmc_init(bd_t *bis)
 			printf("Warning: you configured more ESDHC controller"
 				"(%d) as supported by the board(2)\n",
 				CONFIG_SYS_FSL_ESDHC_NUM);
-			return status;
+			return -EINVAL;
 		}
-		status |= fsl_esdhc_initialize(bis, &esdhc_cfg[index]);
+		ret = fsl_esdhc_initialize(bis, &esdhc_cfg[index]);
+		if (ret)
+			return ret;
 	}
 
-	return status;
+	return 0;
 }
 #endif
 
@@ -224,6 +207,8 @@ static int power_init(void)
 		p = pmic_get("DIALOG_PMIC");
 		if (!p)
 			return -ENODEV;
+
+		env_set("fdt_file", "imx53-qsb.dtb");
 
 		/* Set VDDA to 1.25V */
 		val = DA9052_BUCKCORE_BCOREEN | DA_BUCKCORE_VBCORE_1_250V;
@@ -258,13 +243,15 @@ static int power_init(void)
 	}
 
 	if (!i2c_probe(CONFIG_SYS_FSL_PMIC_I2C_ADDR)) {
-		ret = pmic_init(I2C_PMIC);
+		ret = pmic_init(I2C_0);
 		if (ret)
 			return ret;
 
 		p = pmic_get("FSL_PMIC");
 		if (!p)
 			return -ENODEV;
+
+		env_set("fdt_file", "imx53-qsrb.dtb");
 
 		/* Set VDDGP to 1.25V for 1GHz on SW1 */
 		pmic_reg_read(p, REG_SW_0, &val);
@@ -343,20 +330,6 @@ int board_early_init_f(void)
 	return 0;
 }
 
-int print_cpuinfo(void)
-{
-	u32 cpurev;
-
-	cpurev = get_cpu_rev();
-	printf("CPU:   Freescale i.MX%x family rev%d.%d at %d MHz\n",
-		(cpurev & 0xFF000) >> 12,
-		(cpurev & 0x000F0) >> 4,
-		(cpurev & 0x0000F) >> 0,
-		mxc_get_clock(MXC_ARM_CLK) / 1000000);
-	printf("Reset cause: %s\n", get_reset_cause());
-	return 0;
-}
-
 /*
  * Do not overwrite the console
  * Use always serial for U-Boot console
@@ -380,7 +353,6 @@ int board_late_init(void)
 {
 	if (!power_init())
 		clock_1GHz();
-	print_cpuinfo();
 
 	return 0;
 }

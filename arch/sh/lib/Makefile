@@ -5,57 +5,25 @@
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-include $(TOPDIR)/config.mk
+extra-y	+= start.o
 
-LIB	= $(obj)lib$(ARCH).o
-LIBGCC	= $(obj)libgcc.o
-
-SOBJS-y	+=
-GLSOBJS	+= ashiftrt.o
-GLSOBJS	+= ashiftlt.o
-GLSOBJS	+= lshiftrt.o
-GLSOBJS	+= ashldi3.o
-GLSOBJS	+= ashrsi3.o
-GLSOBJS	+= lshrdi3.o
-GLSOBJS	+= movmem.o
-
-COBJS-y	+= board.o
-COBJS-$(CONFIG_CMD_BOOTM) += bootm.o
-ifeq ($(CONFIG_SH2),y)
-COBJS-y	+= time_sh2.o
+obj-y	+= board.o
+obj-$(CONFIG_CMD_BOOTM) += bootm.o
+ifeq ($(CONFIG_CPU_SH2),y)
+obj-y	+= time_sh2.o
 else
-COBJS-y	+= time.o
+obj-y	+= time.o
 endif
-ifeq ($(CONFIG_CMD_SH_ZIMAGEBOOT),y)
-COBJS-y += zimageboot.o
+obj-$(CONFIG_CMD_SH_ZIMAGEBOOT) += zimageboot.o
+
+udivsi3-y			:= udivsi3_i4i-Os.o
+
+ifneq ($(CONFIG_CC_OPTIMIZE_FOR_SIZE),y)
+udivsi3-$(CONFIG_CPU_SH3)	:= udivsi3_i4i.o
+udivsi3-$(CONFIG_CPU_SH4)	:= udivsi3_i4i.o
 endif
+udivsi3-y			+= udivsi3.o
 
-SRCS	:= $(SOBJS-y:.o=.S) $(COBJS-y:.o=.c)
-OBJS	:= $(addprefix $(obj),$(SOBJS-y) $(COBJS-y))
-LGOBJS	:= $(addprefix $(obj),$(GLSOBJS)) \
-	   $(addprefix $(obj),$(GLCOBJS))
-
-# Always build libsh.o
-TARGETS	:= $(LIB)
-
-# Build private libgcc only when asked for
-ifdef USE_PRIVATE_LIBGCC
-TARGETS	+= $(LIBGCC)
-endif
-
-all:	$(TARGETS)
-
-$(LIB):	$(obj).depend $(OBJS)
-	$(call cmd_link_o_target, $(OBJS))
-
-$(LIBGCC): $(obj).depend $(LGOBJS)
-	$(call cmd_link_o_target, $(LGOBJS))
-
-#########################################################################
-
-# defines $(obj).depend target
-include $(SRCTREE)/rules.mk
-
-sinclude $(obj).depend
-
-#########################################################################
+lib-$(CONFIG_USE_PRIVATE_LIBGCC) += movmem.o ashldi3.o ashrdi3.o lshrdi3.o \
+				    ashlsi3.o ashrsi3.o ashiftrt.o lshrsi3.o \
+				    udiv_qrnnd.o $(udivsi3-y)

@@ -18,7 +18,7 @@
 #include <asm/io.h>
 #include <asm/arch/hardware.h>
 #include <asm/arch/gpio.h>
-#include <asm/arch/emif_defs.h>
+#include <asm/ti-common/davinci_nand.h>
 #include <asm/arch/emac_defs.h>
 #include <asm/arch/pinmux_defs.h>
 #include <asm/arch/davinci_misc.h>
@@ -100,9 +100,7 @@ int board_init(void)
 {
 	int val;
 
-#ifndef CONFIG_USE_IRQ
 	irq_init();
-#endif
 
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = LINUX_BOOT_PARAM_ADDR;

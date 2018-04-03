@@ -289,7 +289,6 @@ void adjust_core_voltage(void)
 {
 	u8 data;
 
-	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
 	data = 0x35;
 	i2c_set_bus_num(0);
 	i2c_write(0x40, 3, 1, &data, 1);
@@ -350,7 +349,7 @@ int board_init(void)
 }
 
 const struct rmobile_sysinfo sysinfo = {
-	CONFIG_RMOBILE_BOARD_STRING
+	CONFIG_ARCH_RMOBILE_BOARD_STRING
 };
 
 int dram_init(void)

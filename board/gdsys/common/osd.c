@@ -1,6 +1,6 @@
 /*
  * (C) Copyright 2010
- * Dirk Eibach,  Guntermann & Drunck GmbH, eibach@gdsys.de
+ * Dirk Eibach,  Guntermann & Drunck GmbH, dirk.eibach@gdsys.cc
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -9,9 +9,9 @@
 #include <i2c.h>
 #include <malloc.h>
 
+#include "ch7301.h"
+#include "dp501.h"
 #include <gdsys_fpga.h>
-
-#define CH7301_I2C_ADDR 0x75
 
 #define ICS8N3QV01_I2C_ADDR 0x6E
 #define ICS8N3QV01_FREF 114285000
@@ -25,78 +25,55 @@
 #define SIL1178_SLAVE_I2C_ADDRESS 0x39
 
 #define PIXCLK_640_480_60 25180000
+#define MAX_X_CHARS 53
+#define MAX_Y_CHARS 26
 
-enum {
-	CH7301_CM = 0x1c,		/* Clock Mode Register */
-	CH7301_IC = 0x1d,		/* Input Clock Register */
-	CH7301_GPIO = 0x1e,		/* GPIO Control Register */
-	CH7301_IDF = 0x1f,		/* Input Data Format Register */
-	CH7301_CD = 0x20,		/* Connection Detect Register */
-	CH7301_DC = 0x21,		/* DAC Control Register */
-	CH7301_HPD = 0x23,		/* Hot Plug Detection Register */
-	CH7301_TCTL = 0x31,		/* DVI Control Input Register */
-	CH7301_TPCP = 0x33,		/* DVI PLL Charge Pump Ctrl Register */
-	CH7301_TPD = 0x34,		/* DVI PLL Divide Register */
-	CH7301_TPVT = 0x35,		/* DVI PLL Supply Control Register */
-	CH7301_TPF = 0x36,		/* DVI PLL Filter Register */
-	CH7301_TCT = 0x37,		/* DVI Clock Test Register */
-	CH7301_TSTP = 0x48,		/* Test Pattern Register */
-	CH7301_PM = 0x49,		/* Power Management register */
-	CH7301_VID = 0x4a,		/* Version ID Register */
-	CH7301_DID = 0x4b,		/* Device ID Register */
-	CH7301_DSP = 0x56,		/* DVI Sync polarity Register */
-};
+#ifdef CONFIG_SYS_OSD_DH
+#define MAX_OSD_SCREEN 8
+#define OSD_DH_BASE 4
+#else
+#define MAX_OSD_SCREEN 4
+#endif
+
+#ifdef CONFIG_SYS_OSD_DH
+#define OSD_SET_REG(screen, fld, val) \
+	do { \
+		if (screen >= OSD_DH_BASE) \
+			FPGA_SET_REG(screen - OSD_DH_BASE, osd1.fld, val); \
+		else \
+			FPGA_SET_REG(screen, osd0.fld, val); \
+	} while (0)
+#else
+#define OSD_SET_REG(screen, fld, val) \
+		FPGA_SET_REG(screen, osd0.fld, val)
+#endif
+
+#ifdef CONFIG_SYS_OSD_DH
+#define OSD_GET_REG(screen, fld, val) \
+	do {					\
+		if (screen >= OSD_DH_BASE) \
+			FPGA_GET_REG(screen - OSD_DH_BASE, osd1.fld, val); \
+		else \
+			FPGA_GET_REG(screen, osd0.fld, val); \
+	} while (0)
+#else
+#define OSD_GET_REG(screen, fld, val) \
+		FPGA_GET_REG(screen, osd0.fld, val)
+#endif
 
 unsigned int base_width;
 unsigned int base_height;
 size_t bufsize;
 u16 *buf;
 
-unsigned int max_osd_screen = CONFIG_SYS_OSD_SCREENS - 1;
+unsigned int osd_screen_mask = 0;
 
-#ifdef CONFIG_SYS_CH7301
-int ch7301_i2c[] = CONFIG_SYS_CH7301_I2C;
+#ifdef CONFIG_SYS_ICS8N3QV01_I2C
+int ics8n3qv01_i2c[] = CONFIG_SYS_ICS8N3QV01_I2C;
 #endif
 
-#if defined(CONFIG_SYS_ICS8N3QV01) || defined(CONFIG_SYS_SIL1178)
-static void fpga_iic_write(unsigned screen, u8 slave, u8 reg, u8 data)
-{
-	u16 val;
-
-	do {
-		FPGA_GET_REG(screen, extended_interrupt, &val);
-	} while (val & (1 << 12));
-
-	FPGA_SET_REG(screen, i2c.write_mailbox_ext, reg | (data << 8));
-	FPGA_SET_REG(screen, i2c.write_mailbox, 0xc400 | (slave << 1));
-}
-
-static u8 fpga_iic_read(unsigned screen, u8 slave, u8 reg)
-{
-	unsigned int ctr = 0;
-	u16 val;
-
-	do {
-		FPGA_GET_REG(screen, extended_interrupt, &val);
-	} while (val & (1 << 12));
-
-	FPGA_SET_REG(screen, extended_interrupt, 1 << 14);
-	FPGA_SET_REG(screen, i2c.write_mailbox_ext, reg);
-	FPGA_SET_REG(screen, i2c.write_mailbox, 0xc000 | (slave << 1));
-
-	FPGA_GET_REG(screen, extended_interrupt, &val);
-	while (!(val & (1 << 14))) {
-		udelay(100000);
-		if (ctr++ > 5) {
-			printf("iic receive timeout\n");
-			break;
-		}
-		FPGA_GET_REG(screen, extended_interrupt, &val);
-	}
-
-	FPGA_GET_REG(screen, i2c.read_mailbox_ext, &val);
-	return val >> 8;
-}
+#ifdef CONFIG_SYS_SIL1178_I2C
+int sil1178_i2c[] = CONFIG_SYS_SIL1178_I2C;
 #endif
 
 #ifdef CONFIG_SYS_MPC92469AC
@@ -151,9 +128,9 @@ static void mpc92469ac_set(unsigned screen, unsigned int fout)
 }
 #endif
 
-#ifdef CONFIG_SYS_ICS8N3QV01
+#ifdef CONFIG_SYS_ICS8N3QV01_I2C
 
-static unsigned int ics8n3qv01_get_fout_calc(unsigned screen, unsigned index)
+static unsigned int ics8n3qv01_get_fout_calc(unsigned index)
 {
 	unsigned long long n;
 	unsigned long long mint;
@@ -164,11 +141,11 @@ static unsigned int ics8n3qv01_get_fout_calc(unsigned screen, unsigned index)
 	if (index > 3)
 		return 0;
 
-	reg_a = fpga_iic_read(screen, ICS8N3QV01_I2C_ADDR, 0 + index);
-	reg_b = fpga_iic_read(screen, ICS8N3QV01_I2C_ADDR, 4 + index);
-	reg_c = fpga_iic_read(screen, ICS8N3QV01_I2C_ADDR, 8 + index);
-	reg_d = fpga_iic_read(screen, ICS8N3QV01_I2C_ADDR, 12 + index);
-	reg_f = fpga_iic_read(screen, ICS8N3QV01_I2C_ADDR, 20 + index);
+	reg_a = i2c_reg_read(ICS8N3QV01_I2C_ADDR, 0 + index);
+	reg_b = i2c_reg_read(ICS8N3QV01_I2C_ADDR, 4 + index);
+	reg_c = i2c_reg_read(ICS8N3QV01_I2C_ADDR, 8 + index);
+	reg_d = i2c_reg_read(ICS8N3QV01_I2C_ADDR, 12 + index);
+	reg_f = i2c_reg_read(ICS8N3QV01_I2C_ADDR, 20 + index);
 
 	mint = ((reg_a >> 1) & 0x1f) | (reg_f & 0x20);
 	mfrac = ((reg_a & 0x01) << 17) | (reg_b << 9) | (reg_c << 1)
@@ -216,7 +193,7 @@ static void ics8n3qv01_calc_parameters(unsigned int fout,
 	*_n = n;
 }
 
-static void ics8n3qv01_set(unsigned screen, unsigned int fout)
+static void ics8n3qv01_set(unsigned int fout)
 {
 	unsigned int n;
 	unsigned int mint;
@@ -226,7 +203,7 @@ static void ics8n3qv01_set(unsigned screen, unsigned int fout)
 	long long off_ppm;
 	u8 reg0, reg4, reg8, reg12, reg18, reg20;
 
-	fout_calc = ics8n3qv01_get_fout_calc(screen, 1);
+	fout_calc = ics8n3qv01_get_fout_calc(1);
 	off_ppm = (fout_calc - ICS8N3QV01_F_DEFAULT_1) * 1000000
 		  / ICS8N3QV01_F_DEFAULT_1;
 	printf("       PLL is off by %lld ppm\n", off_ppm);
@@ -234,28 +211,28 @@ static void ics8n3qv01_set(unsigned screen, unsigned int fout)
 		    / ICS8N3QV01_F_DEFAULT_1;
 	ics8n3qv01_calc_parameters(fout_prog, &mint, &mfrac, &n);
 
-	reg0 = fpga_iic_read(screen, ICS8N3QV01_I2C_ADDR, 0) & 0xc0;
+	reg0 = i2c_reg_read(ICS8N3QV01_I2C_ADDR, 0) & 0xc0;
 	reg0 |= (mint & 0x1f) << 1;
 	reg0 |= (mfrac >> 17) & 0x01;
-	fpga_iic_write(screen, ICS8N3QV01_I2C_ADDR, 0, reg0);
+	i2c_reg_write(ICS8N3QV01_I2C_ADDR, 0, reg0);
 
 	reg4 = mfrac >> 9;
-	fpga_iic_write(screen, ICS8N3QV01_I2C_ADDR, 4, reg4);
+	i2c_reg_write(ICS8N3QV01_I2C_ADDR, 4, reg4);
 
 	reg8 = mfrac >> 1;
-	fpga_iic_write(screen, ICS8N3QV01_I2C_ADDR, 8, reg8);
+	i2c_reg_write(ICS8N3QV01_I2C_ADDR, 8, reg8);
 
 	reg12 = mfrac << 7;
 	reg12 |= n & 0x7f;
-	fpga_iic_write(screen, ICS8N3QV01_I2C_ADDR, 12, reg12);
+	i2c_reg_write(ICS8N3QV01_I2C_ADDR, 12, reg12);
 
-	reg18 = fpga_iic_read(screen, ICS8N3QV01_I2C_ADDR, 18) & 0x03;
+	reg18 = i2c_reg_read(ICS8N3QV01_I2C_ADDR, 18) & 0x03;
 	reg18 |= 0x20;
-	fpga_iic_write(screen, ICS8N3QV01_I2C_ADDR, 18, reg18);
+	i2c_reg_write(ICS8N3QV01_I2C_ADDR, 18, reg18);
 
-	reg20 = fpga_iic_read(screen, ICS8N3QV01_I2C_ADDR, 20) & 0x1f;
+	reg20 = i2c_reg_read(ICS8N3QV01_I2C_ADDR, 20) & 0x1f;
 	reg20 |= mint & (1 << 5);
-	fpga_iic_write(screen, ICS8N3QV01_I2C_ADDR, 20, reg20);
+	i2c_reg_write(ICS8N3QV01_I2C_ADDR, 20, reg20);
 }
 #endif
 
@@ -267,7 +244,15 @@ static int osd_write_videomem(unsigned screen, unsigned offset,
 	for (k = 0; k < charcount; ++k) {
 		if (offset + k >= bufsize)
 			return -1;
-		FPGA_SET_REG(screen, videomem[offset + k], data[k]);
+#ifdef CONFIG_SYS_OSD_DH
+		if (screen >= OSD_DH_BASE)
+			FPGA_SET_REG(screen - OSD_DH_BASE,
+				     videomem1[offset + k], data[k]);
+		else
+			FPGA_SET_REG(screen, videomem0[offset + k], data[k]);
+#else
+		FPGA_SET_REG(screen, videomem0[offset + k], data[k]);
+#endif
 	}
 
 	return charcount;
@@ -277,7 +262,12 @@ static int osd_print(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned screen;
 
-	for (screen = 0; screen <= max_osd_screen; ++screen) {
+	if (argc < 5) {
+		cmd_usage(cmdtp);
+		return 1;
+	}
+
+	for (screen = 0; screen < MAX_OSD_SCREEN; ++screen) {
 		unsigned x;
 		unsigned y;
 		unsigned charcount;
@@ -287,10 +277,8 @@ static int osd_print(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		char *text;
 		int res;
 
-		if (argc < 5) {
-			cmd_usage(cmdtp);
-			return 1;
-		}
+		if (!(osd_screen_mask & (1 << screen)))
+			continue;
 
 		x = simple_strtoul(argv[1], NULL, 16);
 		y = simple_strtoul(argv[2], NULL, 16);
@@ -305,6 +293,8 @@ static int osd_print(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		res = osd_write_videomem(screen, y * base_width + x, buf, len);
 		if (res < 0)
 			return res;
+
+		OSD_SET_REG(screen, control, 0x0049);
 	}
 
 	return 0;
@@ -314,13 +304,12 @@ int osd_probe(unsigned screen)
 {
 	u16 version;
 	u16 features;
-	u8 value;
-#ifdef CONFIG_SYS_CH7301
 	int old_bus = i2c_get_bus_num();
-#endif
+	bool pixclock_present = false;
+	bool output_driver_present = false;
 
-	FPGA_GET_REG(0, osd.version, &version);
-	FPGA_GET_REG(0, osd.features, &features);
+	OSD_GET_REG(0, version, &version);
+	OSD_GET_REG(0, features, &features);
 
 	base_width = ((features & 0x3f00) >> 8) + 1;
 	base_height = (features & 0x001f) + 1;
@@ -329,61 +318,79 @@ int osd_probe(unsigned screen)
 	if (!buf)
 		return -1;
 
+#ifdef CONFIG_SYS_OSD_DH
+	printf("OSD%d-%d: Digital-OSD version %01d.%02d, %d" "x%d characters\n",
+	       (screen >= OSD_DH_BASE) ? (screen - OSD_DH_BASE) : screen,
+	       (screen > 3) ? 1 : 0, version/100, version%100, base_width,
+	       base_height);
+#else
 	printf("OSD%d:  Digital-OSD version %01d.%02d, %d" "x%d characters\n",
-		screen, version/100, version%100, base_width, base_height);
-
-#ifdef CONFIG_SYS_CH7301
-	i2c_set_bus_num(ch7301_i2c[screen]);
-	value = i2c_reg_read(CH7301_I2C_ADDR, CH7301_DID);
-	if (value != 0x17) {
-		printf("       Probing CH7301 failed, DID %02x\n", value);
-		i2c_set_bus_num(old_bus);
-		return -1;
-	}
-	i2c_reg_write(CH7301_I2C_ADDR, CH7301_TPCP, 0x08);
-	i2c_reg_write(CH7301_I2C_ADDR, CH7301_TPD, 0x16);
-	i2c_reg_write(CH7301_I2C_ADDR, CH7301_TPF, 0x60);
-	i2c_reg_write(CH7301_I2C_ADDR, CH7301_DC, 0x09);
-	i2c_reg_write(CH7301_I2C_ADDR, CH7301_PM, 0xc0);
-	i2c_set_bus_num(old_bus);
+	       screen, version/100, version%100, base_width, base_height);
 #endif
+	/* setup pixclock */
 
 #ifdef CONFIG_SYS_MPC92469AC
+	pixclock_present = true;
 	mpc92469ac_set(screen, PIXCLK_640_480_60);
 #endif
 
-#ifdef CONFIG_SYS_ICS8N3QV01
-	ics8n3qv01_set(screen, PIXCLK_640_480_60);
-#endif
-
-#ifdef CONFIG_SYS_SIL1178
-	value = fpga_iic_read(screen, SIL1178_SLAVE_I2C_ADDRESS, 0x02);
-	if (value != 0x06) {
-		printf("       Probing CH7301 SIL1178, DEV_IDL %02x\n", value);
-		return -1;
+#ifdef CONFIG_SYS_ICS8N3QV01_I2C
+	i2c_set_bus_num(ics8n3qv01_i2c[screen]);
+	if (!i2c_probe(ICS8N3QV01_I2C_ADDR)) {
+		ics8n3qv01_set(PIXCLK_640_480_60);
+		pixclock_present = true;
 	}
-	/* magic initialization sequence adapted from datasheet */
-	fpga_iic_write(screen, SIL1178_SLAVE_I2C_ADDRESS, 0x08, 0x36);
-	fpga_iic_write(screen, SIL1178_MASTER_I2C_ADDRESS, 0x0f, 0x44);
-	fpga_iic_write(screen, SIL1178_MASTER_I2C_ADDRESS, 0x0f, 0x4c);
-	fpga_iic_write(screen, SIL1178_MASTER_I2C_ADDRESS, 0x0e, 0x10);
-	fpga_iic_write(screen, SIL1178_MASTER_I2C_ADDRESS, 0x0a, 0x80);
-	fpga_iic_write(screen, SIL1178_MASTER_I2C_ADDRESS, 0x09, 0x30);
-	fpga_iic_write(screen, SIL1178_MASTER_I2C_ADDRESS, 0x0c, 0x89);
-	fpga_iic_write(screen, SIL1178_MASTER_I2C_ADDRESS, 0x0d, 0x60);
-	fpga_iic_write(screen, SIL1178_MASTER_I2C_ADDRESS, 0x08, 0x36);
-	fpga_iic_write(screen, SIL1178_MASTER_I2C_ADDRESS, 0x08, 0x37);
 #endif
 
-	FPGA_SET_REG(screen, videocontrol, 0x0002);
-	FPGA_SET_REG(screen, osd.control, 0x0049);
+	if (!pixclock_present)
+		printf("       no pixelclock found\n");
 
-	FPGA_SET_REG(screen, osd.xy_size, ((32 - 1) << 8) | (16 - 1));
-	FPGA_SET_REG(screen, osd.x_pos, 0x007f);
-	FPGA_SET_REG(screen, osd.y_pos, 0x005f);
+	/* setup output driver */
 
-	if (screen > max_osd_screen)
-		max_osd_screen = screen;
+#ifdef CONFIG_SYS_CH7301_I2C
+	if (!ch7301_probe(screen, true))
+		output_driver_present = true;
+#endif
+
+#ifdef CONFIG_SYS_SIL1178_I2C
+	i2c_set_bus_num(sil1178_i2c[screen]);
+	if (!i2c_probe(SIL1178_SLAVE_I2C_ADDRESS)) {
+		if (i2c_reg_read(SIL1178_SLAVE_I2C_ADDRESS, 0x02) == 0x06) {
+			/*
+			 * magic initialization sequence,
+			 * adapted from datasheet
+			 */
+			i2c_reg_write(SIL1178_SLAVE_I2C_ADDRESS, 0x08, 0x36);
+			i2c_reg_write(SIL1178_MASTER_I2C_ADDRESS, 0x0f, 0x44);
+			i2c_reg_write(SIL1178_MASTER_I2C_ADDRESS, 0x0f, 0x4c);
+			i2c_reg_write(SIL1178_MASTER_I2C_ADDRESS, 0x0e, 0x10);
+			i2c_reg_write(SIL1178_MASTER_I2C_ADDRESS, 0x0a, 0x80);
+			i2c_reg_write(SIL1178_MASTER_I2C_ADDRESS, 0x09, 0x30);
+			i2c_reg_write(SIL1178_MASTER_I2C_ADDRESS, 0x0c, 0x89);
+			i2c_reg_write(SIL1178_MASTER_I2C_ADDRESS, 0x0d, 0x60);
+			i2c_reg_write(SIL1178_MASTER_I2C_ADDRESS, 0x08, 0x36);
+			i2c_reg_write(SIL1178_MASTER_I2C_ADDRESS, 0x08, 0x37);
+			output_driver_present = true;
+		}
+	}
+#endif
+
+#ifdef CONFIG_SYS_DP501_I2C
+	if (!dp501_probe(screen, true))
+		output_driver_present = true;
+#endif
+
+	if (!output_driver_present)
+		printf("       no output driver found\n");
+
+	OSD_SET_REG(screen, xy_size, ((32 - 1) << 8) | (16 - 1));
+	OSD_SET_REG(screen, x_pos, 0x007f);
+	OSD_SET_REG(screen, y_pos, 0x005f);
+
+	if (pixclock_present && output_driver_present)
+		osd_screen_mask |= 1 << screen;
+
+	i2c_set_bus_num(old_bus);
 
 	return 0;
 }
@@ -392,7 +399,12 @@ int osd_write(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned screen;
 
-	for (screen = 0; screen <= max_osd_screen; ++screen) {
+	if ((argc < 4) || (strlen(argv[3]) % 4)) {
+		cmd_usage(cmdtp);
+		return 1;
+	}
+
+	for (screen = 0; screen < MAX_OSD_SCREEN; ++screen) {
 		unsigned x;
 		unsigned y;
 		unsigned k;
@@ -402,10 +414,8 @@ int osd_write(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		unsigned count = (argc > 4) ?
 			simple_strtoul(argv[4], NULL, 16) : 1;
 
-		if ((argc < 4) || (strlen(argv[3]) % 4)) {
-			cmd_usage(cmdtp);
-			return 1;
-		}
+		if (!(osd_screen_mask & (1 << screen)))
+			continue;
 
 		x = simple_strtoul(argv[1], NULL, 16);
 		y = simple_strtoul(argv[2], NULL, 16);
@@ -431,6 +441,40 @@ int osd_write(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			osd_write_videomem(screen, offset, buffer,
 				wp - buffer);
 		}
+
+		OSD_SET_REG(screen, control, 0x0049);
+	}
+
+	return 0;
+}
+
+int osd_size(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	unsigned screen;
+	unsigned x;
+	unsigned y;
+
+	if (argc < 3) {
+		cmd_usage(cmdtp);
+		return 1;
+	}
+
+	x = simple_strtoul(argv[1], NULL, 16);
+	y = simple_strtoul(argv[2], NULL, 16);
+
+	if (!x || (x > 64) || (x > MAX_X_CHARS) ||
+	    !y || (y > 32) || (y > MAX_Y_CHARS)) {
+		cmd_usage(cmdtp);
+		return 1;
+	}
+
+	for (screen = 0; screen < MAX_OSD_SCREEN; ++screen) {
+		if (!(osd_screen_mask & (1 << screen)))
+			continue;
+
+		OSD_SET_REG(screen, xy_size, ((x - 1) << 8) | (y - 1));
+		OSD_SET_REG(screen, x_pos, 32767 * (640 - 12 * x) / 65535);
+		OSD_SET_REG(screen, y_pos, 32767 * (480 - 18 * y) / 65535);
 	}
 
 	return 0;
@@ -446,4 +490,11 @@ U_BOOT_CMD(
 	osdp, 5, 0, osd_print,
 	"write ASCII buffer to osd memory",
 	"pos_x pos_y color text\n"
+);
+
+U_BOOT_CMD(
+	osdsize, 3, 0, osd_size,
+	"set OSD XY size in characters",
+	"size_x(max. " __stringify(MAX_X_CHARS)
+	") size_y(max. " __stringify(MAX_Y_CHARS) ")\n"
 );

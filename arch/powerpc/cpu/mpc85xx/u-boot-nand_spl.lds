@@ -7,7 +7,7 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-#include "config.h"	/* CONFIG_BOARDDIR */
+#include "config.h"
 
 OUTPUT_ARCH(powerpc)
 SECTIONS
@@ -22,7 +22,6 @@ SECTIONS
 		_GOT2_TABLE_ = .;
 		KEEP(*(.got2))
 		KEEP(*(.got))
-		PROVIDE(_GLOBAL_OFFSET_TABLE_ = . + 4);
 		_FIXUP_TABLE_ = .;
 		KEEP(*(.fixup))
 	}
