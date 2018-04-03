@@ -201,6 +201,12 @@ config TARGET_MX6CUBOXI
 	select BOARD_LATE_INIT
 	select SUPPORT_SPL
 
+config TARGET_CUSTOM_SILHOUETTESTAR2
+	bool "ARANZ SilhouetteStar2"
+	select MX6QDL
+	select BOARD_LATE_INIT
+	select SUPPORT_SPL
+
 config TARGET_MX6LOGICPD
 	bool "Logic PD i.MX6 SOM"
 	select BOARD_EARLY_INIT_F
@@ -497,5 +503,6 @@ source "board/udoo/Kconfig"
 source "board/udoo/neo/Kconfig"
 source "board/wandboard/Kconfig"
 source "board/warp/Kconfig"
+source "board/aranz/silhouettestar2/Kconfig"
 
 endif
