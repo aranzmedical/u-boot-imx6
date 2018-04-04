@@ -17,9 +17,9 @@
 #include <asm/omap_gpio.h>
 #include <asm/arch/dss.h>
 #include <asm/arch/clock.h>
-#include "errno.h"
+#include <errno.h>
 #include <i2c.h>
-#ifdef CONFIG_USB_EHCI
+#ifdef CONFIG_USB_EHCI_HCD
 #include <usb.h>
 #include <asm/ehci-omap.h>
 #endif
@@ -33,16 +33,17 @@ DECLARE_GLOBAL_DATA_PTR;
 /* Address of the framebuffer in RAM. */
 #define FB_START_ADDRESS 0x88000000
 
-#ifdef CONFIG_USB_EHCI
+#ifdef CONFIG_USB_EHCI_HCD
 static struct omap_usbhs_board_data usbhs_bdata = {
 	.port_mode[0] = OMAP_EHCI_PORT_MODE_PHY,
 	.port_mode[1] = OMAP_USBHS_PORT_MODE_UNUSED,
 	.port_mode[2] = OMAP_USBHS_PORT_MODE_UNUSED,
 };
 
-int ehci_hcd_init(int index, struct ehci_hccr **hccr, struct ehci_hcor **hcor)
+int ehci_hcd_init(int index, enum usb_init_type init,
+		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
 {
-	return omap_ehci_hcd_init(&usbhs_bdata, hccr, hcor);
+	return omap_ehci_hcd_init(index, &usbhs_bdata, hccr, hcor);
 }
 
 int ehci_hcd_stop(int index)
@@ -82,7 +83,7 @@ int board_late_init(void)
 	if (gpio_get_value(HOT_WATER_BUTTON))
 		return 0;
 
-	setenv("bootcmd", "run swupdate");
+	env_set("bootcmd", "run swupdate");
 
 	return 0;
 }
@@ -99,7 +100,7 @@ void set_muxconf_regs(void)
 	MUX_MCX();
 }
 
-#if defined(CONFIG_OMAP_HSMMC) && !defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_MMC_OMAP_HS)
 int board_mmc_init(bd_t *bis)
 {
 	return omap_mmc_init(0, 0, 0, -1, -1);

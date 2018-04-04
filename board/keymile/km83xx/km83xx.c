@@ -28,6 +28,10 @@
 
 #include "../common/common.h"
 
+DECLARE_GLOBAL_DATA_PTR;
+
+static uchar ivm_content[CONFIG_SYS_IVM_EEPROM_MAX_LEN];
+
 const qe_iop_conf_t qe_iop_conf_tab[] = {
 	/* port pin dir open_drain assign */
 #if defined(CONFIG_MPC8360)
@@ -190,6 +194,7 @@ int board_early_init_r(void)
 
 int misc_init_r(void)
 {
+	ivm_read_eeprom(ivm_content, CONFIG_SYS_IVM_EEPROM_MAX_LEN);
 	return 0;
 }
 
@@ -225,6 +230,11 @@ static struct mv88e_sw_reg extsw_conf[] = {
 	{ PORT(5), 0x1A, 0xADB1 },
 	/* port 6, unused, this port has no phy */
 	{ PORT(6), PORT_CTRL, PORT_DIS },
+	/*
+	 * Errata Fix: 1.9V Output from Internal 1.8V Regulator,
+	 * acc . MV-S300889-00D.pdf , clause 4.5
+	 */
+	{ PORT(5), 0x1A, 0xADB1 },
 };
 #endif
 
@@ -253,11 +263,11 @@ int last_stage_init(void)
 	mv88e_sw_reset(name, CONFIG_KM_MVEXTSW_ADDR);
 
 	if (piggy_present()) {
-		setenv("ethact", "UEC2");
-		setenv("netdev", "eth1");
+		env_set("ethact", "UEC2");
+		env_set("netdev", "eth1");
 		puts("using PIGGY for network boot\n");
 	} else {
-		setenv("netdev", "eth0");
+		env_set("netdev", "eth0");
 		puts("using frontport for network boot\n");
 	}
 #endif
@@ -270,14 +280,14 @@ int last_stage_init(void)
 	if (dip_switch != 0) {
 		/* start bootloader */
 		puts("DIP:   Enabled\n");
-		setenv("actual_bank", "0");
+		env_set("actual_bank", "0");
 	}
 #endif
 	set_km_env();
 	return 0;
 }
 
-int fixed_sdram(void)
+static int fixed_sdram(void)
 {
 	immap_t *im = (immap_t *)CONFIG_SYS_IMMR;
 	u32 msize = 0;
@@ -320,13 +330,13 @@ int fixed_sdram(void)
 	return msize;
 }
 
-phys_size_t initdram(int board_type)
+int dram_init(void)
 {
 	immap_t *im = (immap_t *)CONFIG_SYS_IMMR;
 	u32 msize = 0;
 
 	if ((in_be32(&im->sysconf.immrbar) & IMMRBAR_BASE_ADDR) != (u32)im)
-		return -1;
+		return -ENXIO;
 
 	out_be32(&im->sysconf.ddrlaw[0].bar,
 		CONFIG_SYS_DDR_BASE & LAWBAR_BAR);
@@ -340,7 +350,9 @@ phys_size_t initdram(int board_type)
 #endif
 
 	/* return total bus SDRAM size(bytes)  -- DDR */
-	return msize * 1024 * 1024;
+	gd->ram_size = msize * 1024 * 1024;
+
+	return 0;
 }
 
 int checkboard(void)
@@ -353,17 +365,17 @@ int checkboard(void)
 	return 0;
 }
 
-#if defined(CONFIG_OF_BOARD_SETUP)
-void ft_board_setup(void *blob, bd_t *bd)
+int ft_board_setup(void *blob, bd_t *bd)
 {
 	ft_cpu_setup(blob, bd);
+
+	return 0;
 }
-#endif
 
 #if defined(CONFIG_HUSH_INIT_VAR)
 int hush_init_var(void)
 {
-	ivm_read_eeprom();
+	ivm_analyze_eeprom(ivm_content, CONFIG_SYS_IVM_EEPROM_MAX_LEN);
 	return 0;
 }
 #endif

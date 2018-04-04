@@ -5,33 +5,29 @@
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-include $(TOPDIR)/config.mk
-
-LIB	= $(obj)lib$(CPU).o
-
-START	= start.o
-COBJS	= cpu.o cache.o
+extra-y	= start.o
+obj-y	= cpu.o cache.o
 
 ifdef	CONFIG_SPL_BUILD
 ifdef	CONFIG_SPL_NO_CPU_SUPPORT_CODE
-START	:=
+extra-y	:=
 endif
 endif
 
-SRCS	:= $(START:.o=.S) $(SOBJS:.o=.S) $(COBJS:.o=.c)
-OBJS	:= $(addprefix $(obj),$(COBJS) $(SOBJS))
-START	:= $(addprefix $(obj),$(START))
+obj-$(CONFIG_ARMADA100) += armada100/
+obj-$(if $(filter lpc32xx,$(SOC)),y) += lpc32xx/
+obj-$(CONFIG_MX25) += mx25/
+obj-$(CONFIG_MX27) += mx27/
+obj-$(if $(filter mxs,$(SOC)),y) += mxs/
+obj-$(if $(filter spear,$(SOC)),y) += spear/
 
-all:	$(obj).depend $(START) $(LIB)
+# some files can only build in ARM or THUMB2, not THUMB1
 
-$(LIB):	$(OBJS)
-	$(call cmd_link_o_target, $(OBJS))
+ifdef CONFIG_$(SPL_)SYS_THUMB_BUILD
+ifndef CONFIG_HAS_THUMB2
 
-#########################################################################
+CFLAGS_cpu.o := -marm
+CFLAGS_cache.o := -marm
 
-# defines $(obj).depend target
-include $(SRCTREE)/rules.mk
-
-sinclude $(obj).depend
-
-#########################################################################
+endif
+endif

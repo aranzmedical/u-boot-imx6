@@ -5,61 +5,30 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-#ifndef _SYS_PROTO_H_
-#define _SYS_PROTO_H_
+#ifndef __SYS_PROTO_IMX6_
+#define __SYS_PROTO_IMX6_
 
-#include <asm/imx-common/regs-common.h>
+#include <asm/mach-imx/sys_proto.h>
+#include <asm/arch/iomux.h>
 
-enum boot_device {
-        MX6_SD0_BOOT,
-        MX6_SD1_BOOT,
-        MX6_MMC_BOOT,
-        MX6_NAND_BOOT,
-        MX6_SATA_BOOT,
-        MX6_WEIM_NOR_BOOT,
-        MX6_ONE_NAND_BOOT,
-        MX6_PATA_BOOT,
-        MX6_I2C_BOOT,
-        MX6_SPI_NOR_BOOT,
-        MX6_UNKNOWN_BOOT,
-        MX6_BOOT_DEV_NUM = MX6_UNKNOWN_BOOT,
-};
+#define USBPHY_PWD		0x00000000
 
-#define MXC_CPU_MX51		0x51
-#define MXC_CPU_MX53		0x53
-#define MXC_CPU_MX6SL		0x60
-#define MXC_CPU_MX6DL		0x61
-#define MXC_CPU_MX6SOLO		0x62
-#define MXC_CPU_MX6Q		0x63
+#define USBPHY_PWD_RXPWDRX	(1 << 20) /* receiver block power down */
 
-#define is_soc_rev(rev)	((get_cpu_rev() & 0xFF) - rev)
-u32 get_cpu_rev(void);
+#define is_usbotg_phy_active(void) (!(readl(USB_PHY0_BASE_ADDR + USBPHY_PWD) & \
+				   USBPHY_PWD_RXPWDRX))
 
-/* returns MXC_CPU_ value */
-#define cpu_type(rev) (((rev) >> 12)&0xff)
+int imx6_pcie_toggle_power(void);
+int imx6_pcie_toggle_reset(void);
 
-/* use with MXC_CPU_ constants */
-#define is_cpu_type(cpu) (cpu_type(get_cpu_rev()) == cpu)
-
-const char *get_imx_type(u32 imxtype);
-unsigned imx_ddr_size(void);
-
-void set_vddsoc(u32 mv);
-
-/*
- * Initializes on-chip ethernet controllers.
- * to override, implement board_eth_init()
+/**
+ * iomuxc_set_rgmii_io_voltage - set voltage level of RGMII/USB pins
+ *
+ * @param io_vol - the voltage IO level of pins
  */
+static inline void iomuxc_set_rgmii_io_voltage(int io_vol)
+{
+	__raw_writel(io_vol, IOMUXC_SW_PAD_CTL_GRP_DDR_TYPE_RGMII);
+}
 
-int fecmxc_initialize(bd_t *bis);
-u32 get_ahb_clk(void);
-u32 get_periph_clk(void);
-
-int mxs_reset_block(struct mxs_register_32 *reg);
-int mxs_wait_mask_set(struct mxs_register_32 *reg,
-		       uint32_t mask,
-		       unsigned int timeout);
-int mxs_wait_mask_clr(struct mxs_register_32 *reg,
-		       uint32_t mask,
-		       unsigned int timeout);
-#endif
+#endif /* __SYS_PROTO_IMX6_ */

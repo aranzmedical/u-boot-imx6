@@ -5,29 +5,15 @@
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-include $(TOPDIR)/config.mk
+extra-y	= start.o
 
-LIB	= $(obj)lib$(CPU).o
+obj-y	+= cpu.o
 
-START	= start.o
+obj-$(CONFIG_EP93XX) += ep93xx/
+obj-$(CONFIG_IMX) += imx/
 
-COBJS-y	+= cpu.o
-COBJS-$(CONFIG_USE_IRQ)	+= interrupts.o
+# some files can only build in ARM mode
 
-SRCS	:= $(START:.o=.S) $(SOBJS:.o=.S) $(COBJS-y:.o=.c)
-OBJS	:= $(addprefix $(obj),$(COBJS-y) $(SOBJS))
-START	:= $(addprefix $(obj),$(START))
-
-all:	$(obj).depend $(START) $(LIB)
-
-$(LIB):	$(OBJS)
-	$(call cmd_link_o_target, $(OBJS))
-
-#########################################################################
-
-# defines $(obj).depend target
-include $(SRCTREE)/rules.mk
-
-sinclude $(obj).depend
-
-#########################################################################
+ifdef CONFIG_$(SPL_)SYS_THUMB_BUILD
+CFLAGS_cpu.o := -marm
+endif

@@ -1,7 +1,7 @@
 /*
  * (C) Copyright 2012
  * eInfochips Ltd. <www.einfochips.com>
- * Written-by: Ajay Bhargav <ajay.bhargav@einfochips.com>
+ * Written-by: Ajay Bhargav <contact@8051projects.net>
  *
  * This driver is based on Kirkwood echi driver
  * (C) Copyright 2009
@@ -22,7 +22,8 @@
 /*
  * EHCI host controller init
  */
-int ehci_hcd_init(int index, struct ehci_hccr **hccr, struct ehci_hcor **hcor)
+int ehci_hcd_init(int index, enum usb_init_type init,
+		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
 {
 	if (utmi_init() < 0)
 		return -1;

@@ -8,6 +8,7 @@
  */
 #include <common.h>
 #include <usb.h>
+#include <asm/io.h>
 
 #include "ehci.h"
 
@@ -15,7 +16,8 @@
  * Create the appropriate control structures to manage
  * a new EHCI host controller.
  */
-int ehci_hcd_init(int index, struct ehci_hccr **hccr, struct ehci_hcor **hcor)
+int ehci_hcd_init(int index, enum usb_init_type init,
+		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
 {
 	*hccr = (struct ehci_hccr *)(CONFIG_SYS_PPC4XX_USB_ADDR);
 	*hcor = (struct ehci_hcor *)((uint32_t) *hccr +

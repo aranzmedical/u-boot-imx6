@@ -48,13 +48,6 @@
 #define EMIF4_0_CFG_BASE		0x4C000000
 #define EMIF4_1_CFG_BASE		0x4D000000
 
-/* PLL related registers */
-#define CM_DPLL				0x44E00500
-#define CM_DEVICE			0x44E00700
-#define CM_RTC				0x44E00800
-#define CM_CEFUSE			0x44E00A00
-#define PRM_DEVICE			0x44E00F00
-
 /* DDR Base address */
 #define DDR_CTRL_ADDR			0x44E10E04
 #define DDR_CONTROL_BASE_ADDR		0x44E11404
@@ -67,6 +60,19 @@
 
 /* CPSW Config space */
 #define CPSW_BASE			0x4A100000
+
+/* Control status register */
+#define CTRL_CRYSTAL_FREQ_SRC_MASK		(1 << 31)
+#define CTRL_CRYSTAL_FREQ_SRC_SHIFT		31
+#define CTRL_CRYSTAL_FREQ_SELECTION_MASK	(0x3 << 29)
+#define CTRL_CRYSTAL_FREQ_SELECTION_SHIFT	29
+#define CTRL_SYSBOOT_15_14_MASK			(0x3 << 22)
+#define CTRL_SYSBOOT_15_14_SHIFT		22
+
+#define CTRL_CRYSTAL_FREQ_SRC_SYSBOOT		0x0
+#define CTRL_CRYSTAL_FREQ_SRC_EFUSE		0x1
+
+#define NUM_CRYSTAL_FREQ			0x4
 
 int clk_get(int clk);
 #endif /* __AM33XX_HARDWARE_H */

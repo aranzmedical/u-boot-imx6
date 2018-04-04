@@ -9,9 +9,14 @@
 #ifndef __TEGRA_MMC_H_
 #define __TEGRA_MMC_H_
 
+#include <common.h>
+#include <clk.h>
+#include <reset.h>
 #include <fdtdec.h>
+#include <asm/gpio.h>
 
-#define MAX_HOSTS		4	/* Max number of 'hosts'/controllers */
+/* for mmc_config definition */
+#include <mmc.h>
 
 #ifndef __ASSEMBLY__
 struct tegra_mmc {
@@ -103,6 +108,8 @@ struct tegra_mmc {
 #define TEGRA_MMC_CLKCON_SDCLK_FREQ_SEL_SHIFT			8
 #define TEGRA_MMC_CLKCON_SDCLK_FREQ_SEL_MASK			(0xff << 8)
 
+#define TEGRA_MMC_MISCON_ENABLE_EXT_LOOPBACK			(1 << 17)
+
 #define TEGRA_MMC_SWRST_SW_RESET_FOR_ALL			(1 << 0)
 #define TEGRA_MMC_SWRST_SW_RESET_FOR_CMD_LINE			(1 << 1)
 #define TEGRA_MMC_SWRST_SW_RESET_FOR_DAT_LINE			(1 << 2)
@@ -126,21 +133,6 @@ struct tegra_mmc {
 #define AUTO_CAL_ENABLED	(1 << 29)
 #define AUTO_CAL_PD_OFFSET	(0x70 << 8)
 #define AUTO_CAL_PU_OFFSET	(0x62 << 0)
-
-struct mmc_host {
-	struct tegra_mmc *reg;
-	int id;			/* device id/number, 0-3 */
-	int enabled;		/* 1 to enable, 0 to disable */
-	int width;		/* Bus Width, 1, 4 or 8 */
-	enum periph_id mmc_id;	/* Peripheral ID: PERIPH_ID_... */
-	struct fdt_gpio_state cd_gpio;		/* Change Detect GPIO */
-	struct fdt_gpio_state pwr_gpio;		/* Power GPIO */
-	struct fdt_gpio_state wp_gpio;		/* Write Protect GPIO */
-	unsigned int version;	/* SDHCI spec. version */
-	unsigned int clock;	/* Current clock (MHz) */
-};
-
-void pad_init_mmc(struct mmc_host *host);
 
 #endif	/* __ASSEMBLY__ */
 #endif	/* __TEGRA_MMC_H_ */

@@ -29,7 +29,6 @@ extern unsigned long search_exception_table(unsigned long);
  * amount of memory on the system if we're unable to keep all
  * the memory mapped in.
  */
-extern ulong get_effective_memsize(void);
 #define END_OF_MEM (gd->bd->bi_memstart + get_effective_memsize())
 
 /*
@@ -195,14 +194,4 @@ void UnknownException(struct pt_regs *regs)
 	printf("Bad trap at PC: %lx, SR: %lx, vector=%lx\n",
 	       regs->nip, regs->msr, regs->trap);
 	_exception(0, regs);
-}
-
-/*
- * Probe an address by reading.
- * If not present, return -1,
- * otherwise return 0.
- */
-int addr_probe(uint *addr)
-{
-	return 0;
 }

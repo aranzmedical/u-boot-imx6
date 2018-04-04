@@ -14,22 +14,6 @@
 #define CONFIG_MACH_TYPE	MACH_TYPE_MX23EVK
 
 /* U-Boot Commands */
-#define CONFIG_SYS_NO_FLASH
-#include <config_cmd_default.h>
-#undef CONFIG_CMD_NET
-#undef CONFIG_CMD_NFS
-
-#define CONFIG_DISPLAY_CPUINFO
-#define CONFIG_DOS_PARTITION
-
-#define CONFIG_CMD_CACHE
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_GPIO
-#define CONFIG_CMD_MMC
-#define CONFIG_CMD_USB
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_VIDEO
 
 /* Memory configuration */
 #define CONFIG_NR_DRAM_BANKS		1		/* 1 bank of DRAM */
@@ -39,7 +23,6 @@
 
 /* Environment */
 #define CONFIG_ENV_OVERWRITE
-#define CONFIG_ENV_IS_IN_MMC
 
 /* Environment is in MMC */
 #if defined(CONFIG_CMD_MMC) && defined(CONFIG_ENV_IS_IN_MMC)
@@ -52,14 +35,12 @@
 #ifdef	CONFIG_CMD_USB
 #define CONFIG_EHCI_MXS_PORT0
 #define CONFIG_USB_MAX_CONTROLLER_COUNT 1
-#define CONFIG_USB_STORAGE
 #endif
 
 /* Framebuffer support */
 #ifdef CONFIG_VIDEO
 #define CONFIG_VIDEO_LOGO
 #define CONFIG_SPLASH_SCREEN
-#define CONFIG_CMD_BMP
 #define CONFIG_BMP_16BPP
 #define CONFIG_VIDEO_BMP_RLE8
 #define CONFIG_VIDEO_BMP_GZIP
@@ -67,7 +48,6 @@
 #endif
 
 /* Boot Linux */
-#define CONFIG_BOOTDELAY	1
 #define CONFIG_BOOTFILE		"uImage"
 #define CONFIG_LOADADDR		0x42000000
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
@@ -84,7 +64,7 @@
 		"fi ; "	\
 		"fi\0" \
 	"script=boot.scr\0"	\
-	"uimage=uImage\0" \
+	"image=zImage\0" \
 	"console=ttyAMA0\0" \
 	"fdt_file=imx23-evk.dtb\0" \
 	"fdt_addr=0x41000000\0" \
@@ -98,22 +78,22 @@
 		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
 	"bootscript=echo Running bootscript from mmc ...; "	\
 		"source\0" \
-	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
+	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
 	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
 		"run mmcargs; " \
 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
 			"if run loadfdt; then " \
-				"bootm ${loadaddr} - ${fdt_addr}; " \
+				"bootz ${loadaddr} - ${fdt_addr}; " \
 			"else " \
 				"if test ${boot_fdt} = try; then " \
-					"bootm; " \
+					"bootz; " \
 				"else " \
 					"echo WARN: Cannot load the DT; " \
 				"fi; " \
 			"fi; " \
 		"else " \
-			"bootm; " \
+			"bootz; " \
 		"fi;\0"
 
 #define CONFIG_BOOTCOMMAND \
@@ -121,7 +101,7 @@
 		"if run loadbootscript; then " \
 			"run bootscript; " \
 		"else " \
-			"if run loaduimage; then " \
+			"if run loadimage; then " \
 				"run mmcboot; " \
 			"else " \
 				"echo ERR: Fail to boot from MMC; " \

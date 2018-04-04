@@ -4,7 +4,7 @@
  * (C) Copyright 2000
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * SPDX-License-Identifier:	GPL-2.0+ 
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -192,7 +192,5 @@ unsigned long usec2ticks(unsigned long usec)
  */
 ulong get_tbclk(void)
 {
-	ulong tbclk;
-	tbclk = CONFIG_SYS_HZ;
-	return tbclk;
+	return CONFIG_SYS_HZ;
 }

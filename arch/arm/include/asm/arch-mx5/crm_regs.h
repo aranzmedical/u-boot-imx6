@@ -40,7 +40,7 @@ struct mxc_ccm_reg {
 	u32 cs1cdr;
 	u32 cs2cdr;
 	u32 cdcdr;	/* 0x0030 */
-	u32 chscdr;
+	u32 chsccdr;
 	u32 cscdr2;
 	u32 cscdr3;
 	u32 cscdr4;	/* 0x0040 */
@@ -304,6 +304,9 @@ struct mxc_ccm_reg {
 
 /* Define the bits in register CCDR */
 #define MXC_CCM_CCDR_IPU_HS_MASK			(0x1 << 17)
+
+/* Define the bits in register CGPR */
+#define MXC_CCM_CGPR_EFUSE_PROG_SUPPLY_GATE		(1 << 4)
 
 /* Define the bits in register CCGRx */
 #define MXC_CCM_CCGR_CG_MASK				0x3

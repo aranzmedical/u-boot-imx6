@@ -1,235 +1,231 @@
 /*
- * (C) Copyright 2013
- * Richard Hu, Technexion Ltd, richard.hu@technexion.com
-
- * (C) Copyright 2006-2008
- * Stefan Roese, DENX Software Engineering, sr@denx.de.
+ * Copyright (C) 2014 Gateworks Corporation
+ * Author: Tim Harvey <tharvey@gateworks.com>
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
-
 #include <common.h>
 #include <nand.h>
-#include <asm/io.h>
-#include <linux/mtd/nand_ecc.h>
+#include <malloc.h>
 
-static nand_info_t mtd;
+static struct mtd_info *mtd;
 static struct nand_chip nand_chip;
 
-#define CONFIG_SYS_NAND_RESET_CNT 200000
-
-
-static int nand_command_lp(int block, int page, uint32_t column, u8 command)
+static void mxs_nand_command(struct mtd_info *mtd, unsigned int command,
+			     int column, int page_addr)
 {
-	struct nand_chip *chip = mtd.priv;
-	int page_addr = page + block * CONFIG_SYS_NAND_PAGE_COUNT;
-	uint32_t rst_sts_cnt = CONFIG_SYS_NAND_RESET_CNT;
+	register struct nand_chip *chip = mtd_to_nand(mtd);
+	u32 timeo, time_start;
 
-	/* Emulate NAND_CMD_READOOB */
-	if (command == NAND_CMD_READOOB) {
-		column += mtd.writesize;
-		command = NAND_CMD_READ0;
+	/* write out the command to the device */
+	chip->cmd_ctrl(mtd, command, NAND_CLE);
+
+	/* Serially input address */
+	if (column != -1) {
+		chip->cmd_ctrl(mtd, column, NAND_ALE);
+		chip->cmd_ctrl(mtd, column >> 8, NAND_ALE);
+	}
+	if (page_addr != -1) {
+		chip->cmd_ctrl(mtd, page_addr, NAND_ALE);
+		chip->cmd_ctrl(mtd, page_addr >> 8, NAND_ALE);
+		/* One more address cycle for devices > 128MiB */
+		if (chip->chipsize > (128 << 20))
+			chip->cmd_ctrl(mtd, page_addr >> 16, NAND_ALE);
+	}
+	chip->cmd_ctrl(mtd, NAND_CMD_NONE, 0);
+
+	if (command == NAND_CMD_READ0) {
+		chip->cmd_ctrl(mtd, NAND_CMD_READSTART, NAND_CLE);
+		chip->cmd_ctrl(mtd, NAND_CMD_NONE, 0);
 	}
 
-	/* Command latch cycle */
-	chip->cmd_ctrl(&mtd, command & 0xff,
-		       NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
-
-	if (column != -1 || page_addr != -1) {
-		int ctrl = NAND_CTRL_CHANGE | NAND_NCE | NAND_ALE;
-
-		/* Serially input address */
-		if (column != -1) {
-			/* Adjust columns for 16 bit buswidth */
-			if (chip->options & NAND_BUSWIDTH_16)
-				column >>= 1;
-			chip->cmd_ctrl(&mtd, column, ctrl);
-			ctrl &= ~NAND_CTRL_CHANGE;
-			chip->cmd_ctrl(&mtd, column >> 8, ctrl);
-		}
-		if (page_addr != -1) {
-			chip->cmd_ctrl(&mtd, page_addr, ctrl);
-			chip->cmd_ctrl(&mtd, page_addr >> 8,
-					NAND_NCE | NAND_ALE);
-			#ifdef CONFIG_SYS_NAND_5_ADDR_CYCLE
-			chip->cmd_ctrl(&mtd, page_addr >> 16,
-					NAND_NCE | NAND_ALE);
-			#endif
-		}
-	}
-	chip->cmd_ctrl(&mtd, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
-
-	/*
-	 * Program and erase have their own busy handlers status, sequential
-	 * in, and deplete1 need no delay.
-	 */
-	switch (command) {
-
-	case NAND_CMD_CACHEDPROG:
-	case NAND_CMD_PAGEPROG:
-	case NAND_CMD_ERASE1:
-	case NAND_CMD_ERASE2:
-	case NAND_CMD_SEQIN:
-	case NAND_CMD_RNDIN:
-	case NAND_CMD_STATUS:
-	case NAND_CMD_DEPLETE1:
-		return;
-
-	case NAND_CMD_STATUS_ERROR:
-	case NAND_CMD_STATUS_ERROR0:
-	case NAND_CMD_STATUS_ERROR1:
-	case NAND_CMD_STATUS_ERROR2:
-	case NAND_CMD_STATUS_ERROR3:
-		/* Read error status commands require only a short delay */
-		udelay(chip->chip_delay);
-		return;
-
-	case NAND_CMD_RESET:
-		if (chip->dev_ready)
-			break;
-		udelay(chip->chip_delay);
-		chip->cmd_ctrl(&mtd, NAND_CMD_STATUS,
-			       NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
-		chip->cmd_ctrl(&mtd, NAND_CMD_NONE,
-			       NAND_NCE | NAND_CTRL_CHANGE);
-		while (!(chip->read_byte(&mtd) & NAND_STATUS_READY) &&
-			(rst_sts_cnt--));
-		return;
-
-	case NAND_CMD_RNDOUT:
-		/* No ready / busy check necessary */
-		chip->cmd_ctrl(&mtd, NAND_CMD_RNDOUTSTART,
-			       NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
-		chip->cmd_ctrl(&mtd, NAND_CMD_NONE,
-			       NAND_NCE | NAND_CTRL_CHANGE);
-		return;
-
-	case NAND_CMD_READ0:
-		chip->cmd_ctrl(&mtd, NAND_CMD_READSTART,
-			       NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
-		chip->cmd_ctrl(&mtd, NAND_CMD_NONE,
-			       NAND_NCE | NAND_CTRL_CHANGE);
-
-		/* This applies to read commands */
-	default:
-		/*
-		 * If we don't have access to the busy pin, we apply the given
-		 * command delay.
-		 */
-		if (!chip->dev_ready) {
-			udelay(chip->chip_delay);
-			return;
-		}
-	}
-
-	/*
-	 * Apply this short delay always to ensure that we do wait tWB in
-	 * any case on any machine.
-	 */
+	/* wait for nand ready */
 	ndelay(100);
-
-	while (!chip->dev_ready(&mtd))
-	;
+	timeo = (CONFIG_SYS_HZ * 20) / 1000;
+	time_start = get_timer(0);
+	while (get_timer(time_start) < timeo) {
+		if (chip->dev_ready(mtd))
+			break;
+	}
 }
 
-
-static int nand_is_bad_block(int block)
+static int mxs_flash_ident(struct mtd_info *mtd)
 {
-	struct nand_chip *this = mtd.priv;
-	struct mxs_nand_info *nand_info = nand_chip.priv;
-	char bad_mark;
-	
-	nand_command_lp(block, 0, CONFIG_SYS_NAND_BAD_BLOCK_POS, NAND_CMD_READOOB);
-	bad_mark = this->read_byte(&mtd);
-	if (bad_mark != 0xff)	{
-		printf("nand_is_bad_block: %lx is bad block:%x !!! \r\n", block, bad_mark);
-		return 1;
+	register struct nand_chip *chip = mtd_to_nand(mtd);
+	int i;
+	u8 mfg_id, dev_id;
+	u8 id_data[8];
+	struct nand_onfi_params *p = &chip->onfi_params;
+
+	/* Reset the chip */
+	chip->cmdfunc(mtd, NAND_CMD_RESET, -1, -1);
+
+	/* Send the command for reading device ID */
+	chip->cmdfunc(mtd, NAND_CMD_READID, 0x00, -1);
+
+	/* Read manufacturer and device IDs */
+	mfg_id = chip->read_byte(mtd);
+	dev_id = chip->read_byte(mtd);
+
+	/* Try again to make sure */
+	chip->cmdfunc(mtd, NAND_CMD_READID, 0x00, -1);
+	for (i = 0; i < 8; i++)
+		id_data[i] = chip->read_byte(mtd);
+	if (id_data[0] != mfg_id || id_data[1] != dev_id) {
+		printf("second ID read did not match");
+		return -1;
 	}
+	debug("0x%02x:0x%02x ", mfg_id, dev_id);
+
+	/* read ONFI */
+	chip->onfi_version = 0;
+	chip->cmdfunc(mtd, NAND_CMD_READID, 0x20, -1);
+	if (chip->read_byte(mtd) != 'O' || chip->read_byte(mtd) != 'N' ||
+	    chip->read_byte(mtd) != 'F' || chip->read_byte(mtd) != 'I') {
+		return -2;
+	}
+
+	/* we have ONFI, probe it */
+	chip->cmdfunc(mtd, NAND_CMD_PARAM, 0, -1);
+	chip->read_buf(mtd, (uint8_t *)p, sizeof(*p));
+	mtd->name = p->model;
+	mtd->writesize = le32_to_cpu(p->byte_per_page);
+	mtd->erasesize = le32_to_cpu(p->pages_per_block) * mtd->writesize;
+	mtd->oobsize = le16_to_cpu(p->spare_bytes_per_page);
+	chip->chipsize = le32_to_cpu(p->blocks_per_lun);
+	chip->chipsize *= (uint64_t)mtd->erasesize * p->lun_count;
+	/* Calculate the address shift from the page size */
+	chip->page_shift = ffs(mtd->writesize) - 1;
+	chip->phys_erase_shift = ffs(mtd->erasesize) - 1;
+	/* Convert chipsize to number of pages per chip -1 */
+	chip->pagemask = (chip->chipsize >> chip->page_shift) - 1;
+	chip->badblockbits = 8;
+
+	debug("erasesize=%d (>>%d)\n", mtd->erasesize, chip->phys_erase_shift);
+	debug("writesize=%d (>>%d)\n", mtd->writesize, chip->page_shift);
+	debug("oobsize=%d\n", mtd->oobsize);
+	debug("chipsize=%lld\n", chip->chipsize);
 
 	return 0;
 }
 
-static int nand_read_page(int block, int page, void *dst)
+static int mxs_read_page_ecc(struct mtd_info *mtd, void *buf, unsigned int page)
 {
-	struct nand_chip *this = mtd.priv;
+	register struct nand_chip *chip = mtd_to_nand(mtd);
+	int ret;
 
-	void (*hwctrl)(struct mtd_info *mtd, int cmd,
-			unsigned int ctrl) = this->cmd_ctrl;
-
-	nand_command_lp(block, page, 0, NAND_CMD_READ0);
-	this->ecc.read_page(&mtd, &nand_chip, dst, 0, page);
+	chip->cmdfunc(mtd, NAND_CMD_READ0, 0x0, page);
+	ret = nand_chip.ecc.read_page(mtd, chip, buf, 1, page);
+	if (ret < 0) {
+		printf("read_page failed %d\n", ret);
+		return -1;
+	}
+	return 0;
 }
 
-
-int nand_spl_load_image(uint32_t offs, unsigned int size, void *dst)
+static int is_badblock(struct mtd_info *mtd, loff_t offs, int allowbbt)
 {
-	unsigned int block, lastblock;
+	register struct nand_chip *chip = mtd_to_nand(mtd);
+	unsigned int block = offs >> chip->phys_erase_shift;
+	unsigned int page = offs >> chip->page_shift;
+
+	debug("%s offs=0x%08x block:%d page:%d\n", __func__, (int)offs, block,
+	      page);
+	chip->cmdfunc(mtd, NAND_CMD_READ0, mtd->writesize, page);
+	memset(chip->oob_poi, 0, mtd->oobsize);
+	chip->read_buf(mtd, chip->oob_poi, mtd->oobsize);
+
+	return chip->oob_poi[0] != 0xff;
+}
+
+/* setup mtd and nand structs and init mxs_nand driver */
+static int mxs_nand_init(void)
+{
+	/* return if already initalized */
+	if (nand_chip.numchips)
+		return 0;
+
+	/* init mxs nand driver */
+	board_nand_init(&nand_chip);
+	mtd = nand_to_mtd(&nand_chip);
+	/* set mtd functions */
+	nand_chip.cmdfunc = mxs_nand_command;
+	nand_chip.numchips = 1;
+
+	/* identify flash device */
+	puts(": ");
+	if (mxs_flash_ident(mtd)) {
+		printf("Failed to identify\n");
+		return -1;
+	}
+
+	/* allocate and initialize buffers */
+	nand_chip.buffers = memalign(ARCH_DMA_MINALIGN,
+				     sizeof(*nand_chip.buffers));
+	nand_chip.oob_poi = nand_chip.buffers->databuf + mtd->writesize;
+	/* setup flash layout (does not scan as we override that) */
+	mtd->size = nand_chip.chipsize;
+	nand_chip.scan_bbt(mtd);
+
+	printf("%llu MiB\n", (mtd->size / (1024 * 1024)));
+	return 0;
+}
+
+int nand_spl_load_image(uint32_t offs, unsigned int size, void *buf)
+{
+	struct nand_chip *chip;
 	unsigned int page;
+	unsigned int nand_page_per_block;
+	unsigned int sz = 0;
 
-	/*
-	 * offs has to be aligned to a page address!
-	 */
-	block = offs / CONFIG_SYS_NAND_BLOCK_SIZE;
-	lastblock = (offs + size - 1) / CONFIG_SYS_NAND_BLOCK_SIZE;
-	page = (offs % CONFIG_SYS_NAND_BLOCK_SIZE) / CONFIG_SYS_NAND_PAGE_SIZE;
+	if (mxs_nand_init())
+		return -ENODEV;
+	chip = mtd_to_nand(mtd);
+	page = offs >> chip->page_shift;
+	nand_page_per_block = mtd->erasesize / mtd->writesize;
 
-	nand_read_page(block, page, dst);
+	debug("%s offset:0x%08x len:%d page:%d\n", __func__, offs, size, page);
 
-	
-	while (block <= lastblock) {
-		if (!nand_is_bad_block(block)) {
-			//
-			// Skip bad blocks
-			//
-			while (page < CONFIG_SYS_NAND_PAGE_COUNT) {
-				nand_read_page(block, page, dst);
-				dst += CONFIG_SYS_NAND_PAGE_SIZE;
-				page++;
+	size = roundup(size, mtd->writesize);
+	while (sz < size) {
+		if (mxs_read_page_ecc(mtd, buf, page) < 0)
+			return -1;
+		sz += mtd->writesize;
+		offs += mtd->writesize;
+		page++;
+		buf += mtd->writesize;
+
+		/*
+		 * Check if we have crossed a block boundary, and if so
+		 * check for bad block.
+		 */
+		if (!(page % nand_page_per_block)) {
+			/*
+			 * Yes, new block. See if this block is good. If not,
+			 * loop until we find a good block.
+			 */
+			while (is_badblock(mtd, offs, 1)) {
+				page = page + nand_page_per_block;
+				/* Check i we've reached the end of flash. */
+				if (page >= mtd->size >> chip->page_shift)
+					return -ENOMEM;
 			}
-
-			page = 0;
-		
-		} else {
-			lastblock++;
 		}
-		
-
-		block++;
 	}
-	
 
 	return 0;
 }
 
-/* nand_init() - initialize data to make nand usable by SPL */
+int nand_default_bbt(struct mtd_info *mtd)
+{
+	return 0;
+}
+
 void nand_init(void)
 {
-	/*
-	 * Init board specific nand support
-	 */
-	mtd.priv = &nand_chip;
-
-	board_nand_init(&nand_chip);
-	mtd.priv = &nand_chip;	
-
-	if (nand_chip.select_chip)
-		nand_chip.select_chip(&mtd, 0);
-	
-	mtd.writesize = CONFIG_SYS_NAND_PAGE_SIZE;
-	mtd.oobsize = CONFIG_SYS_NAND_OOBSIZE;
-
-	//Actually, not scan and create bbt, just for setting flash memory geometry to BCH
-	nand_chip.scan_bbt(&mtd); 
-
-	nand_chip.buffers = memalign(ARCH_DMA_MINALIGN, sizeof(*nand_chip.buffers));
-	nand_chip.oob_poi = nand_chip.buffers->databuf + mtd.writesize;	
-
 }
 
-/* Unselect after operation */
 void nand_deselect(void)
 {
-	if (nand_chip.select_chip)
-		nand_chip.select_chip(&mtd, -1);
 }
 

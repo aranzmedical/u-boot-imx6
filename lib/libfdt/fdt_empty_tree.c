@@ -3,8 +3,7 @@
  * Copyright (C) 2012 David Gibson, IBM Corporation.
  * SPDX-License-Identifier:	GPL-2.0+ BSD-2-Clause
  */
-#include "libfdt_env.h"
-
+#include <libfdt_env.h>
 #include <fdt.h>
 #include <libfdt.h>
 
@@ -36,4 +35,3 @@ int fdt_create_empty_tree(void *buf, int bufsize)
 
 	return fdt_open_into(buf, buf, bufsize);
 }
-
