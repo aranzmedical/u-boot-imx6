@@ -50,7 +50,6 @@
 	"bootm_size=0x10000000\0" \
 	"finduuid=part uuid mmc 0:1 uuid\0" \
   "fdt_addr=0x18000000\0" \
-  "loadbootenvfromboot=load mmc ${mmcdev}:${mmcpart} ${loadaddr} /boot/uEnv.txt;\0" \
   "loadbootenv=load mmc ${mmcdev}:1 ${loadaddr} uEnv.txt;\0" \
   "importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
     "env import -t ${loadaddr} ${filesize};\0" \
@@ -60,12 +59,8 @@
   "loadzImagefile=load mmc ${mmcdev}:1 ${loadaddr} zImage;\0" \
   "boot_aranz=" \
     "setenv bootargs console=${console},${baudrate} quiet coherent_pool=180M root=${mmcroot} rootwait rw; " \
-    "if run loadbootenvfromboot; then " \
+    "if run loadbootenv; then " \
       "run importbootenv; " \
-    "else " \
-      "if run loadbootenv; then " \
-        "run importbootenv; " \
-      "fi; " \
     "fi; " \
     "if test ${board_rev} = MX6DL; then " \
       "setenv fdt_prefix imx6dl; " \
@@ -77,14 +72,14 @@
       "echo Loaded Devicetree from mmc${mmcdev}:${mmcpart} /boot/${fdt_file};" \
     "else " \
       "if run loadftdfile; then " \
-        "echo Loaded Devicetree from mmc${mmcdev}:1 ${fdt_file};" \
+        "echo Loaded Devicetree from Boot Partition.;" \
       "fi; " \
     "fi; " \
     "if run loadzImagefilefromboot; then " \
-      "echo Loaded Linux Kernel from mmc${mmcdev}:${mmcpart} /boot/zImage-3.14.79+g5dcba44;" \
+      "echo Loaded Linux Kernel from mmc${mmcdev}:${mmcpart} /boot/zImage; " \
     "else " \
       "if run loadzImagefile; then " \
-        "echo Loaded Linux Kernel from mmc${mmcdev}:1 /zImage;" \
+        "echo Loaded Linux Kernel from Boot Partition.; " \
       "fi; " \
     "fi; " \
     "bootz ${loadaddr} - ${fdt_addr};\0" \
