@@ -58,7 +58,7 @@
   "loadzImagefilefromboot=load mmc ${mmcdev}:${mmcpart} ${loadaddr} /boot/zImage;\0" \
   "loadzImagefile=load mmc ${mmcdev}:1 ${loadaddr} zImage;\0" \
   "boot_aranz=" \
-    "setenv bootargs console=${console},${baudrate} quiet coherent_pool=180M root=${mmcroot} rootwait ro rootfstype=ext4; " \
+    "setenv bootargs console=${console},${baudrate} quiet coherent_pool=180M root=${mmcroot} rootwait ro rootfstype=ext4 nohlt; " \
     "if run loadbootenv; then " \
       "run importbootenv; " \
     "fi; " \
