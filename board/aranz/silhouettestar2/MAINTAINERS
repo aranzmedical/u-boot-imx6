@@ -1,6 +1,0 @@
-SILHOUETTESTAR2 BOARD
-M:	Chris Schuster <chris.schuster@aranzmedical.com>
-S:	Maintained
-F:	board/aranz/silhouettestar2/
-F:	include/configs/silhouettestar2.h
-F:	configs/silhouettestar2_defconfig
