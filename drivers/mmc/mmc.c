@@ -1645,6 +1645,61 @@ static int mmc_power_init(struct mmc *mmc)
 	return 0;
 }
 
+int mmc_get_op_cond(struct mmc *mmc)
+{
+	int err;
+
+	if (mmc->has_init)
+		return 0;
+
+#ifdef CONFIG_FSL_ESDHC_ADAPTER_IDENT
+	mmc_adapter_card_type_ident();
+#endif
+	err = mmc_power_init(mmc);
+	if (err)
+		return err;
+
+#if CONFIG_IS_ENABLED(DM_MMC)
+	/* The device has already been probed ready for use */
+#else
+	/* made sure it's not NULL earlier */
+	err = mmc->cfg->ops->init(mmc);
+	if (err)
+		return err;
+#endif
+	mmc->ddr_mode = 0;
+	mmc_set_bus_width(mmc, 1);
+	mmc_set_clock(mmc, 1);
+
+	/* Reset the Card */
+	err = mmc_go_idle(mmc);
+
+	if (err)
+		return err;
+
+	/* The internal partition reset to user partition(0) at every CMD0*/
+	mmc_get_blk_desc(mmc)->hwpart = 0;
+
+	/* Test for SD version 2 */
+	err = mmc_send_if_cond(mmc);
+
+	/* Now try to get the SD card's operating condition */
+	err = sd_send_op_cond(mmc);
+
+	/* If the command timed out, we check for an MMC card */
+	if (err == -ETIMEDOUT) {
+		err = mmc_send_op_cond(mmc);
+
+		if (err)
+			err = -EOPNOTSUPP;
+	}
+
+	if (err >= 0)
+		mmc->init_in_progress = 1;
+
+	return err;
+}
+
 int mmc_start_init(struct mmc *mmc)
 {
 	bool no_card;
