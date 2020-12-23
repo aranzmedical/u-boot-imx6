@@ -1,19 +1,17 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2011 DENX Software Engineering GmbH
  * Heiko Schocher <hs@denx.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <command.h>
 #include <rtc.h>
 #include <asm/io.h>
-#include <asm/arch/hardware.h>
+#include <asm/davinci_rtc.h>
 
-#if defined(CONFIG_CMD_DATE)
 int rtc_get(struct rtc_time *tmp)
 {
-	struct davinci_rtc *rtc = davinci_rtc_base;
+	struct davinci_rtc *rtc = (struct davinci_rtc *)DAVINCI_RTC_BASE;
 	unsigned long sec, min, hour, mday, wday, mon_cent, year;
 	unsigned long status;
 
@@ -57,7 +55,7 @@ int rtc_get(struct rtc_time *tmp)
 
 int rtc_set(struct rtc_time *tmp)
 {
-	struct davinci_rtc *rtc = davinci_rtc_base;
+	struct davinci_rtc *rtc = (struct davinci_rtc *)DAVINCI_RTC_BASE;
 
 	debug("Set DATE: %4d-%02d-%02d (wday=%d)  TIME: %2d:%02d:%02d\n",
 		tmp->tm_year, tmp->tm_mon, tmp->tm_mday, tmp->tm_wday,
@@ -75,9 +73,8 @@ int rtc_set(struct rtc_time *tmp)
 
 void rtc_reset(void)
 {
-	struct davinci_rtc *rtc = davinci_rtc_base;
+	struct davinci_rtc *rtc = (struct davinci_rtc *)DAVINCI_RTC_BASE;
 
 	/* run RTC counter */
 	writel(0x01, &rtc->ctrl);
 }
-#endif

@@ -1,5 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Freescale i.MX28 SSP MMC driver
+ *
+ * Copyright (C) 2019 DENX Software Engineering
+ * Lukasz Majewski, DENX Software Engineering, lukma@denx.de
  *
  * Copyright (C) 2011 Marek Vasut <marek.vasut@gmail.com>
  * on behalf of DENX Software Engineering GmbH
@@ -14,31 +18,68 @@
  * Based vaguely on the pxa mmc code:
  * (C) Copyright 2003
  * Kyle Harris, Nexus Technologies, Inc. kharris@nexus-tech.net
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
+
 #include <common.h>
 #include <malloc.h>
 #include <mmc.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
-#include <asm/imx-common/dma.h>
+#include <asm/mach-imx/dma.h>
 #include <bouncebuf.h>
-
-struct mxsmmc_priv {
-	int			id;
-	struct mxs_ssp_regs	*regs;
-	uint32_t		buswidth;
-	int			(*mmc_is_wp)(int);
-	int			(*mmc_cd)(int);
-	struct mxs_dma_desc	*desc;
-};
 
 #define	MXSMMC_MAX_TIMEOUT	10000
 #define MXSMMC_SMALL_TRANSFER	512
+
+#if !CONFIG_IS_ENABLED(DM_MMC)
+struct mxsmmc_priv {
+	int			id;
+	int			(*mmc_is_wp)(int);
+	int			(*mmc_cd)(int);
+	struct mmc_config	cfg;	/* mmc configuration */
+	struct mxs_dma_desc	*desc;
+	uint32_t		buswidth;
+	struct mxs_ssp_regs	*regs;
+};
+#else /* CONFIG_IS_ENABLED(DM_MMC) */
+#include <dm/device.h>
+#include <dm/read.h>
+#include <dt-structs.h>
+
+#ifdef CONFIG_MX28
+#define dtd_fsl_imx_mmc dtd_fsl_imx28_mmc
+#else /* CONFIG_MX23 */
+#define dtd_fsl_imx_mmc dtd_fsl_imx23_mmc
+#endif
+
+struct mxsmmc_platdata {
+#if CONFIG_IS_ENABLED(OF_PLATDATA)
+	struct dtd_fsl_imx_mmc dtplat;
+#endif
+	struct mmc_config cfg;
+	struct mmc mmc;
+	fdt_addr_t base;
+	int non_removable;
+	int buswidth;
+	int dma_id;
+	int clk_id;
+};
+
+struct mxsmmc_priv {
+	int clkid;
+	struct mxs_dma_desc	*desc;
+	u32			buswidth;
+	struct mxs_ssp_regs	*regs;
+	unsigned int            dma_channel;
+};
+#endif
+
+#if !CONFIG_IS_ENABLED(DM_MMC)
+static int mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
+			   struct mmc_data *data);
 
 static int mxsmmc_cd(struct mxsmmc_priv *priv)
 {
@@ -49,6 +90,132 @@ static int mxsmmc_cd(struct mxsmmc_priv *priv)
 
 	return !(readl(&ssp_regs->hw_ssp_status) & SSP_STATUS_CARD_DETECT);
 }
+
+static int mxsmmc_set_ios(struct mmc *mmc)
+{
+	struct mxsmmc_priv *priv = mmc->priv;
+	struct mxs_ssp_regs *ssp_regs = priv->regs;
+
+	/* Set the clock speed */
+	if (mmc->clock)
+		mxs_set_ssp_busclock(priv->id, mmc->clock / 1000);
+
+	switch (mmc->bus_width) {
+	case 1:
+		priv->buswidth = SSP_CTRL0_BUS_WIDTH_ONE_BIT;
+		break;
+	case 4:
+		priv->buswidth = SSP_CTRL0_BUS_WIDTH_FOUR_BIT;
+		break;
+	case 8:
+		priv->buswidth = SSP_CTRL0_BUS_WIDTH_EIGHT_BIT;
+		break;
+	}
+
+	/* Set the bus width */
+	clrsetbits_le32(&ssp_regs->hw_ssp_ctrl0,
+			SSP_CTRL0_BUS_WIDTH_MASK, priv->buswidth);
+
+	debug("MMC%d: Set %d bits bus width\n",
+	      mmc->block_dev.devnum, mmc->bus_width);
+
+	return 0;
+}
+
+static int mxsmmc_init(struct mmc *mmc)
+{
+	struct mxsmmc_priv *priv = mmc->priv;
+	struct mxs_ssp_regs *ssp_regs = priv->regs;
+
+	/* Reset SSP */
+	mxs_reset_block(&ssp_regs->hw_ssp_ctrl0_reg);
+
+	/* Reconfigure the SSP block for MMC operation */
+	writel(SSP_CTRL1_SSP_MODE_SD_MMC |
+		SSP_CTRL1_WORD_LENGTH_EIGHT_BITS |
+		SSP_CTRL1_DMA_ENABLE |
+		SSP_CTRL1_POLARITY |
+		SSP_CTRL1_RECV_TIMEOUT_IRQ_EN |
+		SSP_CTRL1_DATA_CRC_IRQ_EN |
+		SSP_CTRL1_DATA_TIMEOUT_IRQ_EN |
+		SSP_CTRL1_RESP_TIMEOUT_IRQ_EN |
+		SSP_CTRL1_RESP_ERR_IRQ_EN,
+		&ssp_regs->hw_ssp_ctrl1_set);
+
+	/* Set initial bit clock 400 KHz */
+	mxs_set_ssp_busclock(priv->id, 400);
+
+	/* Send initial 74 clock cycles (185 us @ 400 KHz)*/
+	writel(SSP_CMD0_CONT_CLKING_EN, &ssp_regs->hw_ssp_cmd0_set);
+	udelay(200);
+	writel(SSP_CMD0_CONT_CLKING_EN, &ssp_regs->hw_ssp_cmd0_clr);
+
+	return 0;
+}
+
+static const struct mmc_ops mxsmmc_ops = {
+	.send_cmd	= mxsmmc_send_cmd,
+	.set_ios	= mxsmmc_set_ios,
+	.init		= mxsmmc_init,
+};
+
+int mxsmmc_initialize(bd_t *bis, int id, int (*wp)(int), int (*cd)(int))
+{
+	struct mmc *mmc = NULL;
+	struct mxsmmc_priv *priv = NULL;
+	int ret;
+	const unsigned int mxsmmc_clk_id = mxs_ssp_clock_by_bus(id);
+
+	if (!mxs_ssp_bus_id_valid(id))
+		return -ENODEV;
+
+	priv = malloc(sizeof(struct mxsmmc_priv));
+	if (!priv)
+		return -ENOMEM;
+
+	priv->desc = mxs_dma_desc_alloc();
+	if (!priv->desc) {
+		free(priv);
+		return -ENOMEM;
+	}
+
+	ret = mxs_dma_init_channel(MXS_DMA_CHANNEL_AHB_APBH_SSP0 + id);
+	if (ret)
+		return ret;
+
+	priv->mmc_is_wp = wp;
+	priv->mmc_cd = cd;
+	priv->id = id;
+	priv->regs = mxs_ssp_regs_by_bus(id);
+
+	priv->cfg.name = "MXS MMC";
+	priv->cfg.ops = &mxsmmc_ops;
+
+	priv->cfg.voltages = MMC_VDD_32_33 | MMC_VDD_33_34;
+
+	priv->cfg.host_caps = MMC_MODE_4BIT | MMC_MODE_8BIT |
+			 MMC_MODE_HS_52MHz | MMC_MODE_HS;
+
+	/*
+	 * SSPCLK = 480 * 18 / 29 / 1 = 297.731 MHz
+	 * SSP bit rate = SSPCLK / (CLOCK_DIVIDE * (1 + CLOCK_RATE)),
+	 * CLOCK_DIVIDE has to be an even value from 2 to 254, and
+	 * CLOCK_RATE could be any integer from 0 to 255.
+	 */
+	priv->cfg.f_min = 400000;
+	priv->cfg.f_max = mxc_get_clock(MXC_SSP0_CLK + mxsmmc_clk_id)
+		* 1000 / 2;
+	priv->cfg.b_max = 0x20;
+
+	mmc = mmc_create(&priv->cfg, priv);
+	if (!mmc) {
+		mxs_dma_desc_free(priv->desc);
+		free(priv);
+		return -ENOMEM;
+	}
+	return 0;
+}
+#endif /* CONFIG_IS_ENABLED(DM_MMC) */
 
 static int mxsmmc_send_cmd_pio(struct mxsmmc_priv *priv, struct mmc_data *data)
 {
@@ -83,7 +250,7 @@ static int mxsmmc_send_cmd_pio(struct mxsmmc_priv *priv, struct mmc_data *data)
 		}
 	}
 
-	return timeout ? 0 : COMM_ERR;
+	return timeout ? 0 : -ECOMM;
 }
 
 static int mxsmmc_send_cmd_dma(struct mxsmmc_priv *priv, struct mmc_data *data)
@@ -115,11 +282,15 @@ static int mxsmmc_send_cmd_dma(struct mxsmmc_priv *priv, struct mmc_data *data)
 	priv->desc->cmd.data |= MXS_DMA_DESC_IRQ | MXS_DMA_DESC_DEC_SEM |
 				(data_count << MXS_DMA_DESC_BYTES_OFFSET);
 
+#if !CONFIG_IS_ENABLED(DM_MMC)
 	dmach = MXS_DMA_CHANNEL_AHB_APBH_SSP0 + priv->id;
+#else
+	dmach = priv->dma_channel;
+#endif
 	mxs_dma_desc_append(dmach, priv->desc);
 	if (mxs_dma_go(dmach)) {
 		bounce_buffer_stop(&bbstate);
-		return COMM_ERR;
+		return -ECOMM;
 	}
 
 	bounce_buffer_stop(&bbstate);
@@ -127,6 +298,7 @@ static int mxsmmc_send_cmd_dma(struct mxsmmc_priv *priv, struct mmc_data *data)
 	return 0;
 }
 
+#if !CONFIG_IS_ENABLED(DM_MMC)
 /*
  * Sends a command out on the bus.  Takes the mmc pointer,
  * a command pointer, and an optional data pointer.
@@ -134,14 +306,27 @@ static int mxsmmc_send_cmd_dma(struct mxsmmc_priv *priv, struct mmc_data *data)
 static int
 mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 {
-	struct mxsmmc_priv *priv = (struct mxsmmc_priv *)mmc->priv;
+	struct mxsmmc_priv *priv = mmc->priv;
 	struct mxs_ssp_regs *ssp_regs = priv->regs;
+#else
+static int
+mxsmmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, struct mmc_data *data)
+{
+	struct mxsmmc_platdata *plat = dev_get_platdata(dev);
+	struct mxsmmc_priv *priv = dev_get_priv(dev);
+	struct mxs_ssp_regs *ssp_regs = priv->regs;
+	struct mmc *mmc = &plat->mmc;
+#endif
 	uint32_t reg;
 	int timeout;
 	uint32_t ctrl0;
 	int ret;
-
-	debug("MMC%d: CMD%d\n", mmc->block_dev.dev, cmd->cmdidx);
+#if !CONFIG_IS_ENABLED(DM_MMC)
+	int devnum = mmc->block_dev.devnum;
+#else
+	int devnum = mmc_get_blk_desc(mmc)->devnum;
+#endif
+	debug("MMC%d: CMD%d\n", devnum, cmd->cmdidx);
 
 	/* Check bus busy */
 	timeout = MXSMMC_MAX_TIMEOUT;
@@ -156,16 +341,16 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 	}
 
 	if (!timeout) {
-		printf("MMC%d: Bus busy timeout!\n", mmc->block_dev.dev);
-		return TIMEOUT;
+		printf("MMC%d: Bus busy timeout!\n", devnum);
+		return -ETIMEDOUT;
 	}
-
+#if !CONFIG_IS_ENABLED(DM_MMC)
 	/* See if card is present */
 	if (!mxsmmc_cd(priv)) {
-		printf("MMC%d: No card detected!\n", mmc->block_dev.dev);
-		return NO_CARD_ERR;
+		printf("MMC%d: No card detected!\n", devnum);
+		return -ENOMEDIUM;
 	}
-
+#endif
 	/* Start building CTRL0 contents */
 	ctrl0 = priv->buswidth;
 
@@ -198,13 +383,13 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 		/* READ or WRITE */
 		if (data->flags & MMC_DATA_READ) {
 			ctrl0 |= SSP_CTRL0_READ;
+#if !CONFIG_IS_ENABLED(DM_MMC)
 		} else if (priv->mmc_is_wp &&
-			priv->mmc_is_wp(mmc->block_dev.dev)) {
-			printf("MMC%d: Can not write a locked card!\n",
-				mmc->block_dev.dev);
-			return UNUSABLE_ERR;
+			priv->mmc_is_wp(devnum)) {
+			printf("MMC%d: Can not write a locked card!\n", devnum);
+			return -EOPNOTSUPP;
+#endif
 		}
-
 		ctrl0 |= SSP_CTRL0_DATA_XFER;
 
 		reg = data->blocksize * data->blocks;
@@ -241,23 +426,22 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 	}
 
 	if (!timeout) {
-		printf("MMC%d: Command %d busy\n",
-			mmc->block_dev.dev, cmd->cmdidx);
-		return TIMEOUT;
+		printf("MMC%d: Command %d busy\n", devnum, cmd->cmdidx);
+		return -ETIMEDOUT;
 	}
 
 	/* Check command timeout */
 	if (reg & SSP_STATUS_RESP_TIMEOUT) {
-		printf("MMC%d: Command %d timeout (status 0x%08x)\n",
-			mmc->block_dev.dev, cmd->cmdidx, reg);
-		return TIMEOUT;
+		debug("MMC%d: Command %d timeout (status 0x%08x)\n",
+		      devnum, cmd->cmdidx, reg);
+		return -ETIMEDOUT;
 	}
 
 	/* Check command errors */
 	if (reg & (SSP_STATUS_RESP_CRC_ERR | SSP_STATUS_RESP_ERR)) {
 		printf("MMC%d: Command %d error (status 0x%08x)!\n",
-			mmc->block_dev.dev, cmd->cmdidx, reg);
-		return COMM_ERR;
+		       devnum, cmd->cmdidx, reg);
+		return -ECOMM;
 	}
 
 	/* Copy response to response buffer */
@@ -277,15 +461,13 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 		ret = mxsmmc_send_cmd_pio(priv, data);
 		if (ret) {
 			printf("MMC%d: Data timeout with command %d "
-				"(status 0x%08x)!\n",
-				mmc->block_dev.dev, cmd->cmdidx, reg);
+				"(status 0x%08x)!\n", devnum, cmd->cmdidx, reg);
 			return ret;
 		}
 	} else {
 		ret = mxsmmc_send_cmd_dma(priv, data);
 		if (ret) {
-			printf("MMC%d: DMA transfer failed\n",
-				mmc->block_dev.dev);
+			printf("MMC%d: DMA transfer failed\n", devnum);
 			return ret;
 		}
 	}
@@ -296,21 +478,40 @@ mxsmmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 		(SSP_STATUS_TIMEOUT | SSP_STATUS_DATA_CRC_ERR |
 		SSP_STATUS_FIFO_OVRFLW | SSP_STATUS_FIFO_UNDRFLW)) {
 		printf("MMC%d: Data error with command %d (status 0x%08x)!\n",
-			mmc->block_dev.dev, cmd->cmdidx, reg);
-		return COMM_ERR;
+		       devnum, cmd->cmdidx, reg);
+		return -ECOMM;
 	}
 
 	return 0;
 }
 
-static void mxsmmc_set_ios(struct mmc *mmc)
+#if CONFIG_IS_ENABLED(DM_MMC)
+/* Base numbers of i.MX2[38] clk for ssp0 IP block */
+#define MXS_SSP_IMX23_CLKID_SSP0 33
+#define MXS_SSP_IMX28_CLKID_SSP0 46
+
+static int mxsmmc_get_cd(struct udevice *dev)
 {
-	struct mxsmmc_priv *priv = (struct mxsmmc_priv *)mmc->priv;
+	struct mxsmmc_platdata *plat = dev_get_platdata(dev);
+	struct mxsmmc_priv *priv = dev_get_priv(dev);
 	struct mxs_ssp_regs *ssp_regs = priv->regs;
+
+	if (plat->non_removable)
+		return 1;
+
+	return !(readl(&ssp_regs->hw_ssp_status) & SSP_STATUS_CARD_DETECT);
+}
+
+static int mxsmmc_set_ios(struct udevice *dev)
+{
+	struct mxsmmc_platdata *plat = dev_get_platdata(dev);
+	struct mxsmmc_priv *priv = dev_get_priv(dev);
+	struct mxs_ssp_regs *ssp_regs = priv->regs;
+	struct mmc *mmc = &plat->mmc;
 
 	/* Set the clock speed */
 	if (mmc->clock)
-		mxs_set_ssp_busclock(priv->id, mmc->clock / 1000);
+		mxs_set_ssp_busclock(priv->clkid, mmc->clock / 1000);
 
 	switch (mmc->bus_width) {
 	case 1:
@@ -328,13 +529,15 @@ static void mxsmmc_set_ios(struct mmc *mmc)
 	clrsetbits_le32(&ssp_regs->hw_ssp_ctrl0,
 			SSP_CTRL0_BUS_WIDTH_MASK, priv->buswidth);
 
-	debug("MMC%d: Set %d bits bus width\n",
-		mmc->block_dev.dev, mmc->bus_width);
+	debug("MMC%d: Set %d bits bus width\n", mmc_get_blk_desc(mmc)->devnum,
+	      mmc->bus_width);
+
+	return 0;
 }
 
-static int mxsmmc_init(struct mmc *mmc)
+static int mxsmmc_init(struct udevice *dev)
 {
-	struct mxsmmc_priv *priv = (struct mxsmmc_priv *)mmc->priv;
+	struct mxsmmc_priv *priv = dev_get_priv(dev);
 	struct mxs_ssp_regs *ssp_regs = priv->regs;
 
 	/* Reset SSP */
@@ -353,7 +556,7 @@ static int mxsmmc_init(struct mmc *mmc)
 		&ssp_regs->hw_ssp_ctrl1_set);
 
 	/* Set initial bit clock 400 KHz */
-	mxs_set_ssp_busclock(priv->id, 400);
+	mxs_set_ssp_busclock(priv->clkid, 400);
 
 	/* Send initial 74 clock cycles (185 us @ 400 KHz)*/
 	writel(SSP_CMD0_CONT_CLKING_EN, &ssp_regs->hw_ssp_cmd0_set);
@@ -363,55 +566,59 @@ static int mxsmmc_init(struct mmc *mmc)
 	return 0;
 }
 
-int mxsmmc_initialize(bd_t *bis, int id, int (*wp)(int), int (*cd)(int))
+static int mxsmmc_probe(struct udevice *dev)
 {
-	struct mmc *mmc = NULL;
-	struct mxsmmc_priv *priv = NULL;
-	int ret;
-	const unsigned int mxsmmc_clk_id = mxs_ssp_clock_by_bus(id);
+	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
+	struct mxsmmc_platdata *plat = dev_get_platdata(dev);
+	struct mxsmmc_priv *priv = dev_get_priv(dev);
+	struct blk_desc *bdesc;
+	struct mmc *mmc;
+	int ret, clkid;
 
-	if (!mxs_ssp_bus_id_valid(id))
-		return -ENODEV;
+	debug("%s: probe\n", __func__);
 
-	mmc = malloc(sizeof(struct mmc));
-	if (!mmc)
-		return -ENOMEM;
+#if CONFIG_IS_ENABLED(OF_PLATDATA)
+	struct dtd_fsl_imx_mmc *dtplat = &plat->dtplat;
+	struct phandle_1_arg *p1a = &dtplat->clocks[0];
 
-	priv = malloc(sizeof(struct mxsmmc_priv));
-	if (!priv) {
-		free(mmc);
-		return -ENOMEM;
-	}
+	priv->buswidth = dtplat->bus_width;
+	priv->regs = (struct mxs_ssp_regs *)dtplat->reg[0];
+	priv->dma_channel = dtplat->dmas[1];
+	clkid = p1a->arg[0];
+	plat->non_removable = dtplat->non_removable;
+
+	debug("OF_PLATDATA: regs: 0x%p bw: %d clkid: %d non_removable: %d\n",
+	      priv->regs, priv->buswidth, clkid, plat->non_removable);
+#else
+	priv->regs = (struct mxs_ssp_regs *)plat->base;
+	priv->dma_channel = plat->dma_id;
+	clkid = plat->clk_id;
+#endif
+
+#ifdef CONFIG_MX28
+	priv->clkid = clkid - MXS_SSP_IMX28_CLKID_SSP0;
+#else /* CONFIG_MX23 */
+	priv->clkid = clkid - MXS_SSP_IMX23_CLKID_SSP0;
+#endif
+	mmc = &plat->mmc;
+	mmc->cfg = &plat->cfg;
+	mmc->dev = dev;
 
 	priv->desc = mxs_dma_desc_alloc();
 	if (!priv->desc) {
-		free(priv);
-		free(mmc);
+		printf("%s: Cannot allocate DMA descriptor\n", __func__);
 		return -ENOMEM;
 	}
 
-	ret = mxs_dma_init_channel(MXS_DMA_CHANNEL_AHB_APBH_SSP0 + id);
+	ret = mxs_dma_init_channel(priv->dma_channel);
 	if (ret)
 		return ret;
 
-	priv->mmc_is_wp = wp;
-	priv->mmc_cd = cd;
-	priv->id = id;
-	priv->regs = mxs_ssp_regs_by_bus(id);
+	plat->cfg.name = "MXS MMC";
+	plat->cfg.voltages = MMC_VDD_32_33 | MMC_VDD_33_34;
 
-	sprintf(mmc->name, "MXS MMC");
-	mmc->send_cmd = mxsmmc_send_cmd;
-	mmc->set_ios = mxsmmc_set_ios;
-	mmc->init = mxsmmc_init;
-	mmc->getcd = NULL;
-	mmc->getwp = NULL;
-	mmc->priv = priv;
-
-	mmc->voltages = MMC_VDD_32_33 | MMC_VDD_33_34;
-
-	mmc->host_caps = MMC_MODE_4BIT | MMC_MODE_8BIT |
-			 MMC_MODE_HS_52MHz | MMC_MODE_HS |
-			 MMC_MODE_HC;
+	plat->cfg.host_caps = MMC_MODE_4BIT | MMC_MODE_8BIT |
+		MMC_MODE_HS_52MHz | MMC_MODE_HS;
 
 	/*
 	 * SSPCLK = 480 * 18 / 29 / 1 = 297.731 MHz
@@ -419,10 +626,106 @@ int mxsmmc_initialize(bd_t *bis, int id, int (*wp)(int), int (*cd)(int))
 	 * CLOCK_DIVIDE has to be an even value from 2 to 254, and
 	 * CLOCK_RATE could be any integer from 0 to 255.
 	 */
-	mmc->f_min = 400000;
-	mmc->f_max = mxc_get_clock(MXC_SSP0_CLK + mxsmmc_clk_id) * 1000 / 2;
-	mmc->b_max = 0x20;
+	plat->cfg.f_min = 400000;
+	plat->cfg.f_max = mxc_get_clock(MXC_SSP0_CLK + priv->clkid) * 1000 / 2;
+	plat->cfg.b_max = 0x20;
 
-	mmc_register(mmc);
+	bdesc = mmc_get_blk_desc(mmc);
+	if (!bdesc) {
+		printf("%s: No block device descriptor!\n", __func__);
+		return -ENODEV;
+	}
+
+	if (plat->non_removable)
+		bdesc->removable = 0;
+
+	ret = mxsmmc_init(dev);
+	if (ret)
+		printf("%s: MMC%d init error %d\n", __func__,
+		       bdesc->devnum, ret);
+
+	/* Set the initial clock speed */
+	mmc_set_clock(mmc, 400000, MMC_CLK_ENABLE);
+
+	upriv->mmc = mmc;
+
+	return 0;
+};
+
+#if CONFIG_IS_ENABLED(BLK)
+static int mxsmmc_bind(struct udevice *dev)
+{
+	struct mxsmmc_platdata *plat = dev_get_platdata(dev);
+
+	return mmc_bind(dev, &plat->mmc, &plat->cfg);
+}
+#endif
+
+static const struct dm_mmc_ops mxsmmc_ops = {
+	.get_cd		= mxsmmc_get_cd,
+	.send_cmd	= mxsmmc_send_cmd,
+	.set_ios	= mxsmmc_set_ios,
+};
+
+#if CONFIG_IS_ENABLED(OF_CONTROL) && !CONFIG_IS_ENABLED(OF_PLATDATA)
+static int mxsmmc_ofdata_to_platdata(struct udevice *bus)
+{
+	struct mxsmmc_platdata *plat = bus->platdata;
+	u32 prop[2];
+	int ret;
+
+	plat->base = dev_read_addr(bus);
+	plat->buswidth =
+		dev_read_u32_default(bus, "bus-width", 1);
+	plat->non_removable = dev_read_bool(bus, "non-removable");
+
+	ret = dev_read_u32_array(bus, "dmas", prop, ARRAY_SIZE(prop));
+	if (ret) {
+		printf("%s: Reading 'dmas' property failed!\n", __func__);
+		return ret;
+	}
+	plat->dma_id = prop[1];
+
+	ret = dev_read_u32_array(bus, "clocks", prop, ARRAY_SIZE(prop));
+	if (ret) {
+		printf("%s: Reading 'clocks' property failed!\n", __func__);
+		return ret;
+	}
+	plat->clk_id = prop[1];
+
+	debug("%s: base=0x%x, bus_width=%d %s dma_id=%d clk_id=%d\n",
+	      __func__, (uint)plat->base, plat->buswidth,
+	      plat->non_removable ? "non-removable" : NULL,
+	      plat->dma_id, plat->clk_id);
+
 	return 0;
 }
+
+static const struct udevice_id mxsmmc_ids[] = {
+	{ .compatible = "fsl,imx23-mmc", },
+	{ .compatible = "fsl,imx28-mmc", },
+	{ /* sentinel */ }
+};
+#endif
+
+U_BOOT_DRIVER(mxsmmc) = {
+#ifdef CONFIG_MX28
+	.name = "fsl_imx28_mmc",
+#else /* CONFIG_MX23 */
+	.name = "fsl_imx23_mmc",
+#endif
+	.id	= UCLASS_MMC,
+#if CONFIG_IS_ENABLED(OF_CONTROL) && !CONFIG_IS_ENABLED(OF_PLATDATA)
+	.of_match = mxsmmc_ids,
+	.ofdata_to_platdata = mxsmmc_ofdata_to_platdata,
+#endif
+	.ops	= &mxsmmc_ops,
+#if CONFIG_IS_ENABLED(BLK)
+	.bind	= mxsmmc_bind,
+#endif
+	.probe	= mxsmmc_probe,
+	.priv_auto_alloc_size = sizeof(struct mxsmmc_priv),
+	.platdata_auto_alloc_size = sizeof(struct mxsmmc_platdata),
+};
+
+#endif /* CONFIG_DM_MMC */

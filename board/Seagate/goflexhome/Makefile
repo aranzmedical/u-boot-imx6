@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0+
 #
 # Copyright (C) 2013 Suriyan Ramasami <suriyan.r@gmail.com>
 #
@@ -8,28 +9,5 @@
 # Prafulla Wadaskar <prafulla@marvell.com>
 # (C) Copyright 2009
 # Marvell Semiconductor <www.marvell.com>
-#
-# SPDX-License-Identifier:	GPL-2.0+
-#
 
-include $(TOPDIR)/config.mk
-
-LIB	= $(obj)lib$(BOARD).o
-
-COBJS	:= goflexhome.o
-
-SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
-OBJS	:= $(addprefix $(obj),$(COBJS))
-SOBJS	:= $(addprefix $(obj),$(SOBJS))
-
-$(LIB):	$(obj).depend $(OBJS) $(SOBJS)
-	$(call cmd_link_o_target, $(OBJS) $(SOBJS))
-
-#########################################################################
-
-# defines $(obj).depend target
-include $(SRCTREE)/rules.mk
-
-sinclude $(obj).depend
-
-#########################################################################
+obj-y	:= goflexhome.o

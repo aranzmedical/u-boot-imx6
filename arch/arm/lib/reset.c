@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2002
  * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
@@ -17,11 +18,15 @@
  * mailto:info@wawnet.biz
  *
  * (C) Copyright 2004 Texas Insturments
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <cpu_func.h>
+#include <irq_func.h>
+
+__weak void reset_misc(void)
+{
+}
 
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
@@ -30,6 +35,8 @@ int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	udelay (50000);				/* wait 50 ms */
 
 	disable_interrupts();
+
+	reset_misc();
 	reset_cpu(0);
 
 	/*NOTREACHED*/

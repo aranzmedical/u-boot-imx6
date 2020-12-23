@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2002
  * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
@@ -6,8 +7,6 @@
  * (C) Copyright 2002
  * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
  * Alex Zuepke <azu@sysgo.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -16,11 +15,10 @@
 
 #include <common.h>
 #include <command.h>
+#include <cpu_func.h>
+#include <irq_func.h>
 #include <asm/system.h>
-
-#ifdef CONFIG_USE_IRQ
-DECLARE_GLOBAL_DATA_PTR;
-#endif
+#include <asm/io.h>
 
 static void cache_flush(void);
 
@@ -33,7 +31,7 @@ int cleanup_before_linux (void)
 	 * just disable everything that can disturb booting linux
 	 */
 
-	disable_interrupts ();
+	disable_interrupts();
 
 	/* turn off I-cache */
 	icache_disable();
@@ -51,4 +49,17 @@ static void cache_flush (void)
 	unsigned long i = 0;
 
 	asm ("mcr p15, 0, %0, c7, c5, 0": :"r" (i));
+}
+
+#define RST_BASE 0x90030000
+#define RSRR	0x00
+#define RCSR	0x04
+
+__attribute__((noreturn)) void reset_cpu(ulong addr __attribute__((unused)))
+{
+	/* repeat endlessly */
+	while (1) {
+		writel(0, RST_BASE + RCSR);
+		writel(1, RST_BASE + RSRR);
+	}
 }

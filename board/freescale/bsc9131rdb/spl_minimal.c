@@ -1,16 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2013 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <init.h>
 #include <ns16550.h>
 #include <asm/io.h>
 #include <nand.h>
 #include <linux/compiler.h>
 #include <asm/fsl_law.h>
-#include <asm/fsl_ddr_sdram.h>
+#include <fsl_ddr_sdram.h>
 #include <asm/global_data.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -20,7 +20,8 @@ DECLARE_GLOBAL_DATA_PTR;
  */
 static void sdram_init(void)
 {
-	ccsr_ddr_t *ddr = (ccsr_ddr_t *)CONFIG_SYS_MPC8xxx_DDR_ADDR;
+	struct ccsr_ddr __iomem *ddr =
+		(struct ccsr_ddr __iomem *)CONFIG_SYS_FSL_DDR_ADDR;
 
 	__raw_writel(CONFIG_SYS_DDR_CS0_BNDS, &ddr->cs0_bnds);
 	__raw_writel(CONFIG_SYS_DDR_CS0_CONFIG, &ddr->cs0_config);

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Board functions for TI AM335X based rut board
  * (C) Copyright 2013 Siemens Schweiz AG
@@ -7,12 +8,13 @@
  * u-boot:/board/ti/am335x/board.c
  *
  * Copyright (C) 2011, Texas Instruments, Incorporated - http://www.ti.com/
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <env.h>
 #include <errno.h>
+#include <init.h>
+#include <malloc.h>
 #include <spi.h>
 #include <spl.h>
 #include <asm/arch/cpu.h>
@@ -34,8 +36,6 @@
 #include "board.h"
 #include "../common/factoryset.h"
 #include "../../../drivers/video/da8xx-fb.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /*
  * Read header information from EEPROM into global structure.
@@ -63,29 +63,71 @@ struct ddr_data rut_ddr3_data = {
 	.datawdsratio0 = 0x85,
 	.datafwsratio0 = 0x100,
 	.datawrsratio0 = 0xc1,
-	.datauserank0delay = 1,
-	.datadldiff0 = PHY_DLL_LOCK_DIFF,
 };
 
 struct cmd_control rut_ddr3_cmd_ctrl_data = {
 	.cmd0csratio = 0x40,
-	.cmd0dldiff = 0,
 	.cmd0iclkout = 1,
 	.cmd1csratio = 0x40,
-	.cmd1dldiff = 0,
 	.cmd1iclkout = 1,
 	.cmd2csratio = 0x40,
-	.cmd2dldiff = 0,
 	.cmd2iclkout = 1,
 };
 
-	config_ddr(DDR_PLL_FREQ, RUT_IOCTRL_VAL, &rut_ddr3_data,
+const struct ctrl_ioregs ioregs = {
+	.cm0ioctl		= RUT_IOCTRL_VAL,
+	.cm1ioctl		= RUT_IOCTRL_VAL,
+	.cm2ioctl		= RUT_IOCTRL_VAL,
+	.dt0ioctl		= RUT_IOCTRL_VAL,
+	.dt1ioctl		= RUT_IOCTRL_VAL,
+};
+
+	config_ddr(DDR_PLL_FREQ, &ioregs, &rut_ddr3_data,
 		   &rut_ddr3_cmd_ctrl_data, &rut_ddr3_emif_reg_data, 0);
 }
 
+static int request_and_pulse_reset(int gpio, const char *name)
+{
+	int ret;
+	const int delay_us = 2000; /* 2ms */
+
+	ret = gpio_request(gpio, name);
+	if (ret < 0) {
+		printf("%s: Unable to request %s\n", __func__, name);
+		goto err;
+	}
+
+	ret = gpio_direction_output(gpio, 0);
+	if (ret < 0) {
+		printf("%s: Unable to set %s  as output\n", __func__, name);
+		goto err_free_gpio;
+	}
+
+	udelay(delay_us);
+
+	gpio_set_value(gpio, 1);
+
+	return 0;
+
+err_free_gpio:
+	gpio_free(gpio);
+err:
+	return ret;
+}
+
+#define GPIO_TO_PIN(bank, gpio)		(32 * (bank) + (gpio))
+#define ETH_PHY_RESET_GPIO		GPIO_TO_PIN(2, 18)
+#define MAXTOUCH_RESET_GPIO		GPIO_TO_PIN(3, 18)
+#define DISPLAY_RESET_GPIO		GPIO_TO_PIN(3, 19)
+
+#define REQUEST_AND_PULSE_RESET(N) \
+		request_and_pulse_reset(N, #N);
+
 static void spl_siemens_board_init(void)
 {
-	return;
+	REQUEST_AND_PULSE_RESET(ETH_PHY_RESET_GPIO);
+	REQUEST_AND_PULSE_RESET(MAXTOUCH_RESET_GPIO);
+	REQUEST_AND_PULSE_RESET(DISPLAY_RESET_GPIO);
 }
 #endif /* if def CONFIG_SPL_BUILD */
 
@@ -101,13 +143,13 @@ static struct cpsw_slave_data cpsw_slaves[] = {
 	{
 		.slave_reg_ofs	= 0x208,
 		.sliver_reg_ofs	= 0xd80,
-		.phy_id		= 1,
+		.phy_addr	= 1,
 		.phy_if		= PHY_INTERFACE_MODE_RMII,
 	},
 	{
 		.slave_reg_ofs	= 0x308,
 		.sliver_reg_ofs	= 0xdc0,
-		.phy_id		= 0,
+		.phy_addr	= 0,
 		.phy_if		= PHY_INTERFACE_MODE_RMII,
 	},
 };
@@ -132,7 +174,7 @@ static struct cpsw_platform_data cpsw_data = {
 };
 
 #if defined(CONFIG_DRIVER_TI_CPSW) || \
-	(defined(CONFIG_USB_ETHER) && defined(CONFIG_MUSB_GADGET))
+	(defined(CONFIG_USB_ETHER) && defined(CONFIG_USB_MUSB_GADGET))
 int board_eth_init(bd_t *bis)
 {
 	struct ctrl_dev *cdev = (struct ctrl_dev *)CTRL_DEVICE_BASE;
@@ -140,7 +182,7 @@ int board_eth_init(bd_t *bis)
 	int rv;
 
 #ifndef CONFIG_SPL_BUILD
-	factoryset_setenv();
+	factoryset_env_set();
 #endif
 
 	/* Set rgmii mode and enable rmii clock to be sourced from chip */
@@ -328,8 +370,6 @@ static int get_clk(struct dpll_regs *dpll_regs)
 	return f;
 };
 
-
-
 int clk_get(int clk)
 {
 	return get_clk(&dpll_lcd_regs);
@@ -338,7 +378,6 @@ int clk_get(int clk)
 static int conf_disp_pll(int m, int n)
 {
 	struct cm_perpll *cmper = (struct cm_perpll *)CM_PER;
-	struct cm_dpll *cmdpll = (struct cm_dpll *)CM_DPLL;
 	struct dpll_params dpll_lcd = {m, n, -1, -1, -1, -1, -1};
 #if defined(DISPL_PLL_SPREAD_SPECTRUM)
 	struct cm_wkuppll *cmwkup = (struct cm_wkuppll *)CM_WKUP;
@@ -355,15 +394,13 @@ static int conf_disp_pll(int m, int n)
 		0
 	};
 	do_enable_clocks(clk_domains, clk_modules_explicit_en, 1);
-	/* 0x44e0_0500 write lcdc pixel clock mux Linux hat hier 0 */
-	writel(0x0, &cmdpll->clklcdcpixelclk);
 
 	do_setup_dpll(&dpll_lcd_regs, &dpll_lcd);
 
 #if defined(DISPL_PLL_SPREAD_SPECTRUM)
 	writel(0x64, &cmwkup->resv6[3]); /* 0x50 */
 	writel(0x800, &cmwkup->resv6[2]); /* 0x4c */
-	writel(readl(&cmwkup->clkmoddplldisp) | (1 << 12),
+	writel(readl(&cmwkup->clkmoddplldisp) | CM_CLKMODE_DPLL_SSC_EN_MASK,
 	       &cmwkup->clkmoddplldisp); /* 0x98 */
 #endif
 	return 0;
@@ -382,10 +419,13 @@ static int enable_lcd(void)
 {
 	unsigned char buf[1];
 
+	set_gpio(BOARD_LCD_RESET, 0);
+	mdelay(1);
 	set_gpio(BOARD_LCD_RESET, 1);
+	mdelay(1);
 
 	/* spi lcd init */
-	kwh043st20_f01_spi_startup(1, 0, 5000000, SPI_MODE_3);
+	kwh043st20_f01_spi_startup(1, 0, 5000000, SPI_MODE_0);
 
 	/* backlight on */
 	buf[0] = 0xf;
@@ -420,13 +460,34 @@ static int board_video_init(void)
 		printf("%s: %s not found, using default %s\n", __func__,
 		       factory_dat.disp_name, lcd_panels[i].name);
 	}
-	conf_disp_pll(25, 2);
+	conf_disp_pll(24, 1);
 	da8xx_video_init(&lcd_panels[display], &lcd_cfgs[display],
 			 lcd_cfgs[display].bpp);
 
 	return 0;
 }
-
-
 #endif /* ifdef CONFIG_VIDEO */
+
+#ifdef CONFIG_BOARD_LATE_INIT
+int board_late_init(void)
+{
+	int ret;
+	char tmp[2 * MAX_STRING_LENGTH + 2];
+
+	omap_nand_switch_ecc(1, 8);
+
+	if (factory_dat.asn[0] != 0)
+		sprintf(tmp, "%s_%s", factory_dat.asn,
+			factory_dat.comp_version);
+	else
+		strcpy(tmp, "QMX7.E38_4.0");
+
+	ret = env_set("boardid", tmp);
+	if (ret)
+		printf("error setting board id\n");
+
+	return 0;
+}
+#endif
+
 #include "../common/board.c"

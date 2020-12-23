@@ -1,11 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2002
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <irq_func.h>
 
 /*
  * CPU test
@@ -128,7 +128,7 @@ int cpu_post_test_twox (void)
 
 		if (ret != 0)
 		{
-	            post_log ("Error at twox test %d !\n", i);
+		    post_log ("Error at twox test %d !\n", i);
 		}
 	    }
 
@@ -141,8 +141,8 @@ int cpu_post_test_twox (void)
 
 		if (ret != 0)
 		{
-	            post_log ("Error at twox test %d !\n", i);
-	        }
+		    post_log ("Error at twox test %d !\n", i);
+		}
 	    }
 	}
     }

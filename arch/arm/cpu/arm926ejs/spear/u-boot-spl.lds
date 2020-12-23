@@ -1,4 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
+ * Copyright (C) 2015 Stefan Roese <sr@denx.de>
+ *
  * Copyright (C) 2011 Marek Vasut <marek.vasut@gmail.com>
  * on behalf of DENX Software Engineering GmbH
  *
@@ -7,55 +10,45 @@
  *
  * (C) Copyright 2002
  * Gary Jennejohn, DENX Software Engineering, <garyj@denx.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
+
+MEMORY { .sram : ORIGIN = IMAGE_TEXT_BASE,\
+		LENGTH = IMAGE_MAX_SIZE }
 
 OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
 ENTRY(_start)
 SECTIONS
 {
-	. = 0x00000000;
-
-	. = ALIGN(4);
-	.text	:
+	.text      :
 	{
-		arch/arm/cpu/arm926ejs/spear/start.o	(.text*)
+		__start = .;
+		*(.vectors)
+		CPUDIR/spear/start.o	(.text*)
 		*(.text*)
-	}
+	} > .sram
 
 	. = ALIGN(4);
-	.rodata : { *(SORT_BY_ALIGNMENT(SORT_BY_NAME(.rodata*))) }
+	.rodata : { *(SORT_BY_ALIGNMENT(.rodata*)) } >.sram
 
 	. = ALIGN(4);
-	.data : {
-		*(.data*)
-	}
+	.data : { *(SORT_BY_ALIGNMENT(.data*)) } >.sram
 
 	. = ALIGN(4);
+	.u_boot_list : {
+		KEEP(*(SORT(.u_boot_list*)));
+	} > .sram
 
-	.rel.dyn : {
-		__rel_dyn_start = .;
-		*(.rel*)
-		__rel_dyn_end = .;
-	}
+	. = ALIGN(4);
+	__image_copy_end = .;
+	_end = .;
 
-	.bss : {
+	.bss :
+	{
 		. = ALIGN(4);
 		__bss_start = .;
 		*(.bss*)
 		. = ALIGN(4);
 		__bss_end = .;
-	}
-
-	_end = .;
-
-	/DISCARD/ : { *(.dynstr*) }
-	/DISCARD/ : { *(.dynsym*) }
-	/DISCARD/ : { *(.dynamic*) }
-	/DISCARD/ : { *(.hash*) }
-	/DISCARD/ : { *(.plt*) }
-	/DISCARD/ : { *(.interp*) }
-	/DISCARD/ : { *(.gnu*) }
+	} > .sram
 }

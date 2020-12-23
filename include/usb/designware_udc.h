@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2009
  * Vipin Kumar, ST Micoelectronics, vipin.kumar@st.com.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __DW_UDC_H
@@ -174,42 +173,11 @@ struct udcfifo_regs {
 };
 
 /*
- * USBTTY definitions
- */
-#define  EP0_MAX_PACKET_SIZE		64
-#define  UDC_INT_ENDPOINT		1
-#define  UDC_INT_PACKET_SIZE		64
-#define  UDC_OUT_ENDPOINT		2
-#define  UDC_BULK_PACKET_SIZE		64
-#define  UDC_BULK_HS_PACKET_SIZE	512
-#define  UDC_IN_ENDPOINT		3
-#define  UDC_OUT_PACKET_SIZE		64
-#define  UDC_IN_PACKET_SIZE		64
-
-/*
  * UDC endpoint definitions
  */
 #define  UDC_EP0			0
 #define  UDC_EP1			1
 #define  UDC_EP2			2
 #define  UDC_EP3			3
-
-/*
- * Function declarations
- */
-
-void udc_irq(void);
-
-void udc_set_nak(int epid);
-void udc_unset_nak(int epid);
-int udc_endpoint_write(struct usb_endpoint_instance *endpoint);
-int udc_init(void);
-void udc_enable(struct usb_device_instance *device);
-void udc_disable(void);
-void udc_connect(void);
-void udc_disconnect(void);
-void udc_startup_events(struct usb_device_instance *device);
-void udc_setup_ep(struct usb_device_instance *device, unsigned int ep,
-		  struct usb_endpoint_instance *endpoint);
 
 #endif /* __DW_UDC_H */

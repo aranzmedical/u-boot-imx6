@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2012 Stefan Roese <sr@denx.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -163,7 +162,7 @@ static int fpga_wr_fn(int assert_write, int flush, int cookie)
 	return assert_write;
 }
 
-static Xilinx_Spartan3_Slave_Serial_fns x600_fpga_fns = {
+static xilinx_spartan3_slave_serial_fns x600_fpga_fns = {
 	fpga_pre_config_fn,
 	fpga_pgm_fn,
 	fpga_clk_fn,
@@ -173,7 +172,7 @@ static Xilinx_Spartan3_Slave_Serial_fns x600_fpga_fns = {
 	fpga_post_config_fn,
 };
 
-static Xilinx_desc fpga[CONFIG_FPGA_COUNT] = {
+static xilinx_desc fpga[CONFIG_FPGA_COUNT] = {
 	XILINX_XC3S1200E_DESC(slave_serial, &x600_fpga_fns, 0)
 };
 

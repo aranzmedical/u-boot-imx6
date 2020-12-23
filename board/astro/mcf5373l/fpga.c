@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2006
  * Wolfgang Wegner, ASTRO Strobel Kommunikationssysteme GmbH,
@@ -8,13 +9,12 @@
  * and
  * Rich Ireland, Enterasys Networks, rireland@enterasys.com.
  * Keith Outwater, keith_outwater@mvis.com.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /* Altera/Xilinx FPGA configuration support for the ASTRO "URMEL" board */
 
 #include <common.h>
+#include <console.h>
 #include <watchdog.h>
 #include <altera.h>
 #include <ACEX1K.h>
@@ -23,8 +23,6 @@
 #include <asm/immap_5329.h>
 #include <asm/io.h>
 #include "fpga.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 int altera_pre_fn(int cookie)
 {
@@ -100,7 +98,7 @@ int altera_done_fn(int cookie)
  * writing the complete buffer in one function is much faster,
  * then calling it for every bit
  */
-int altera_write_fn(void *buf, size_t len, int flush, int cookie)
+int altera_write_fn(const void *buf, size_t len, int flush, int cookie)
 {
 	size_t bytecount = 0;
 	gpio_t *gpiop = (gpio_t *)MMAP_GPIO;
@@ -203,7 +201,7 @@ int astro5373l_altera_load(void)
 }
 
 /* Set the FPGA's PROG_B line to the specified level */
-int xilinx_pgm_fn(int assert, int flush, int cookie)
+int xilinx_pgm_config_fn(int assert, int flush, int cookie)
 {
 	gpio_t *gpiop = (gpio_t *)MMAP_GPIO;
 
@@ -218,7 +216,7 @@ int xilinx_pgm_fn(int assert, int flush, int cookie)
  * Test the state of the active-low FPGA INIT line.  Return 1 on INIT
  * asserted (low).
  */
-int xilinx_init_fn(int cookie)
+int xilinx_init_config_fn(int cookie)
 {
 	gpio_t *gpiop = (gpio_t *)MMAP_GPIO;
 
@@ -226,7 +224,7 @@ int xilinx_init_fn(int cookie)
 }
 
 /* Test the state of the active-high FPGA DONE pin */
-int xilinx_done_fn(int cookie)
+int xilinx_done_config_fn(int cookie)
 {
 	gpio_t *gpiop = (gpio_t *)MMAP_GPIO;
 
@@ -234,7 +232,7 @@ int xilinx_done_fn(int cookie)
 }
 
 /* Abort an FPGA operation */
-int xilinx_abort_fn(int cookie)
+int xilinx_abort_config_fn(int cookie)
 {
 	gpio_t *gpiop = (gpio_t *)MMAP_GPIO;
 	/* ensure all SPI peripherals and FPGAs are deselected */
@@ -300,7 +298,7 @@ int xilinx_post_config_fn(int cookie)
 	return rc;
 }
 
-int xilinx_clk_fn(int assert_clk, int flush, int cookie)
+int xilinx_clk_config_fn(int assert_clk, int flush, int cookie)
 {
 	gpio_t *gpiop = (gpio_t *)MMAP_GPIO;
 
@@ -311,7 +309,7 @@ int xilinx_clk_fn(int assert_clk, int flush, int cookie)
 	return assert_clk;
 }
 
-int xilinx_wr_fn(int assert_write, int flush, int cookie)
+int xilinx_wr_config_fn(int assert_write, int flush, int cookie)
 {
 	gpio_t *gpiop = (gpio_t *)MMAP_GPIO;
 
@@ -322,7 +320,7 @@ int xilinx_wr_fn(int assert_write, int flush, int cookie)
 	return assert_write;
 }
 
-int xilinx_fastwr_fn(void *buf, size_t len, int flush, int cookie)
+int xilinx_fastwr_config_fn(void *buf, size_t len, int flush, int cookie)
 {
 	size_t bytecount = 0;
 	gpio_t *gpiop = (gpio_t *)MMAP_GPIO;
@@ -363,23 +361,24 @@ int xilinx_fastwr_fn(void *buf, size_t len, int flush, int cookie)
  * relocated at runtime.
  * FIXME: relocation not yet working for coldfire, see below!
  */
-Xilinx_Spartan3_Slave_Serial_fns xilinx_fns = {
+xilinx_spartan3_slave_serial_fns xilinx_fns = {
 	xilinx_pre_config_fn,
-	xilinx_pgm_fn,
-	xilinx_clk_fn,
-	xilinx_init_fn,
-	xilinx_done_fn,
-	xilinx_wr_fn,
+	xilinx_pgm_config_fn,
+	xilinx_clk_config_fn,
+	xilinx_init_config_fn,
+	xilinx_done_config_fn,
+	xilinx_wr_config_fn,
 	0,
-	xilinx_fastwr_fn
+	xilinx_fastwr_config_fn
 };
 
-Xilinx_desc xilinx_fpga[CONFIG_FPGA_COUNT] = {
-	{Xilinx_Spartan3,
+xilinx_desc xilinx_fpga[CONFIG_FPGA_COUNT] = {
+	{xilinx_spartan3,
 	 slave_serial,
 	 XILINX_XC3S4000_SIZE,
 	 (void *)&xilinx_fns,
-	 0}
+	 0,
+	 &spartan3_op}
 };
 
 /* Initialize the fpga.  Return 1 on success, 0 on failure. */
@@ -395,12 +394,12 @@ int astro5373l_xilinx_load(void)
 		 * so set stuff here instead of static initialisation:
 		 */
 		xilinx_fns.pre = xilinx_pre_config_fn;
-		xilinx_fns.pgm = xilinx_pgm_fn;
-		xilinx_fns.clk = xilinx_clk_fn;
-		xilinx_fns.init = xilinx_init_fn;
-		xilinx_fns.done = xilinx_done_fn;
-		xilinx_fns.wr = xilinx_wr_fn;
-		xilinx_fns.bwr = xilinx_fastwr_fn;
+		xilinx_fns.pgm = xilinx_pgm_config_fn;
+		xilinx_fns.clk = xilinx_clk_config_fn;
+		xilinx_fns.init = xilinx_init_config_fn;
+		xilinx_fns.done = xilinx_done_config_fn;
+		xilinx_fns.wr = xilinx_wr_config_fn;
+		xilinx_fns.bwr = xilinx_fastwr_config_fn;
 		xilinx_fpga[i].iface_fns = (void *)&xilinx_fns;
 		fpga_add(fpga_xilinx, &xilinx_fpga[i]);
 	}

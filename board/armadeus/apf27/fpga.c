@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2002-2013
  * Eric Jarrige <eric.jarrige@armadeus.org>
@@ -6,8 +7,6 @@
  * Rich Ireland, Enterasys Networks, rireland@enterasys.com
  * and
  * Keith Outwater, keith_outwater@mvis.com
- *
- * SPDX-License-Identifier:     GPL-2.0+
  */
 #include <common.h>
 
@@ -26,7 +25,7 @@
  * Spartan2 code is used to download our Spartan 3 :) code is compatible.
  * Just take care about the file size
  */
-Xilinx_Spartan3_Slave_Parallel_fns fpga_fns = {
+xilinx_spartan3_slave_parallel_fns fpga_fns = {
 	fpga_pre_fn,
 	fpga_pgm_fn,
 	fpga_init_fn,
@@ -42,12 +41,13 @@ Xilinx_Spartan3_Slave_Parallel_fns fpga_fns = {
 	fpga_post_fn,
 };
 
-Xilinx_desc fpga[CONFIG_FPGA_COUNT] = {
-	{Xilinx_Spartan3,
+xilinx_desc fpga[CONFIG_FPGA_COUNT] = {
+	{xilinx_spartan3,
 	 slave_parallel,
 	 1196128l/8,
 	 (void *)&fpga_fns,
 	 0,
+	 &spartan3_op,
 	 "3s200aft256"}
 };
 

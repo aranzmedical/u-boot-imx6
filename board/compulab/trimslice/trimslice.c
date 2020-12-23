@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  *  (C) Copyright 2010-2012
  *  NVIDIA Corporation <www.nvidia.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -20,7 +19,7 @@ void pin_mux_usb(void)
 	 * USB1 internal/external mux GPIO, which masquerades as a VBUS GPIO
 	 * in the current device tree.
 	 */
-	pinmux_tristate_disable(PINGRP_UAC);
+	pinmux_tristate_disable(PMUX_PINGRP_UAC);
 }
 
 void pin_mux_spi(void)
@@ -38,5 +37,5 @@ void pin_mux_mmc(void)
 	funcmux_select(PERIPH_ID_SDMMC4, FUNCMUX_SDMMC4_ATB_GMA_4_BIT);
 
 	/* For CD GPIO PP1 */
-	pinmux_tristate_disable(PINGRP_DAP3);
+	pinmux_tristate_disable(PMUX_PINGRP_DAP3);
 }

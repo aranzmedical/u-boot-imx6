@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2012 Stefan Roese <sr@denx.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -9,6 +8,7 @@
  */
 
 #include <common.h>
+#include <malloc.h>
 #include <asm/arch/hardware.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
@@ -36,7 +36,10 @@ int gpio_set_value(unsigned gpio, int value)
 {
 	struct gpio_regs *regs = (struct gpio_regs *)CONFIG_GPIO_BASE;
 
-	writel(1 << gpio, &regs->gpiodata[DATA_REG_ADDR(gpio)]);
+	if (value)
+		writel(1 << gpio, &regs->gpiodata[DATA_REG_ADDR(gpio)]);
+	else
+		writel(0, &regs->gpiodata[DATA_REG_ADDR(gpio)]);
 
 	return 0;
 }

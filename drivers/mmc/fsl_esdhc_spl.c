@@ -1,10 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2013 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <cpu_func.h>
+#include <hang.h>
 #include <mmc.h>
 #include <malloc.h>
 
@@ -19,6 +20,33 @@
 #define MBRDBR_BOOT_SIG_AA	0x1ff
 #define CONFIG_CFG_DATA_SECTOR	0
 
+
+void mmc_spl_load_image(uint32_t offs, unsigned int size, void *vdst)
+{
+	uint blk_start, blk_cnt, err;
+
+	struct mmc *mmc = find_mmc_device(0);
+	if (!mmc) {
+		puts("spl: mmc device not found!!\n");
+		hang();
+	}
+
+	if (mmc_init(mmc)) {
+		puts("MMC init failed\n");
+		return;
+	}
+
+	blk_start = ALIGN(offs, mmc->read_bl_len) / mmc->read_bl_len;
+	blk_cnt = ALIGN(size, mmc->read_bl_len) / mmc->read_bl_len;
+
+	err = mmc->block_dev.block_read(&mmc->block_dev, blk_start, blk_cnt,
+					vdst);
+	if (err != blk_cnt) {
+		puts("spl: mmc read failed!!\n");
+		hang();
+	}
+}
+
 /*
  * The main entry for mmc booting. It's necessary that SDRAM is already
  * configured and available since this code loads the main U-Boot image
@@ -29,10 +57,12 @@ void __noreturn mmc_boot(void)
 {
 	__attribute__((noreturn)) void (*uboot)(void);
 	uint blk_start, blk_cnt, err;
-	u32 blklen;
+#ifndef CONFIG_FSL_CORENET
 	uchar *tmp_buf;
+	u32 blklen;
 	uchar val;
 	uint i, byte_num;
+#endif
 	u32 offset, code_len;
 	struct mmc *mmc;
 
@@ -42,6 +72,10 @@ void __noreturn mmc_boot(void)
 		hang();
 	}
 
+#ifdef CONFIG_FSL_CORENET
+	offset = CONFIG_SYS_MMC_U_BOOT_OFFS;
+	code_len = CONFIG_SYS_MMC_U_BOOT_SIZE;
+#else
 	blklen = mmc->read_bl_len;
 	tmp_buf = malloc(blklen);
 	if (!tmp_buf) {
@@ -53,7 +87,8 @@ void __noreturn mmc_boot(void)
 	/*
 	* Read source addr from sd card
 	*/
-	err = mmc->block_dev.block_read(0, CONFIG_CFG_DATA_SECTOR, 1, tmp_buf);
+	err = mmc->block_dev.block_read(&mmc->block_dev,
+					CONFIG_CFG_DATA_SECTOR, 1, tmp_buf);
 	if (err != 1) {
 		puts("spl: mmc read failed!!\n");
 		free(tmp_buf);
@@ -91,13 +126,16 @@ void __noreturn mmc_boot(void)
 	/*
 	* Load U-Boot image from mmc into RAM
 	*/
+#endif
 	blk_start = ALIGN(offset, mmc->read_bl_len) / mmc->read_bl_len;
 	blk_cnt = ALIGN(code_len, mmc->read_bl_len) / mmc->read_bl_len;
-	err = mmc->block_dev.block_read(0, blk_start, blk_cnt,
+	err = mmc->block_dev.block_read(&mmc->block_dev, blk_start, blk_cnt,
 					(uchar *)CONFIG_SYS_MMC_U_BOOT_DST);
 	if (err != blk_cnt) {
 		puts("spl: mmc read failed!!\n");
+#ifndef CONFIG_FSL_CORENET
 		free(tmp_buf);
+#endif
 		hang();
 	}
 

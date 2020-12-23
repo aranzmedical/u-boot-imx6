@@ -1,9 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2008 Renesas Solutions Corp.
  *
  * SH7723 Internal I/O register
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _ASM_CPU_SH7723_H_
@@ -178,8 +177,9 @@
 #define PUDR        0xA4050162
 #define PVDR        0xA4050164
 #define PWDR        0xA4050166
-#define PYDR        0xA4050168
-#define PZDR        0xA405016A
+#define PXDR        0xA4050168
+#define PYDR        0xA405016A
+#define PZDR        0xA405016C
 
 /* UBC */
 /* H-UDI */

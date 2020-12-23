@@ -53,7 +53,7 @@ Settings of DIP-switch
   SW5[1:4]= 0110 and SW5[6]=0 for boot from SPI flash
 Note: 1 stands for 'off', 0 stands for 'on'
 
-Build and program u-boot to NOR flash
+Build and program U-Boot to NOR flash
 ==================================
 1. Build u-boot.bin image example:
 	export ARCH=powerpc
@@ -62,9 +62,9 @@ Build and program u-boot to NOR flash
 
 2. Program u-boot.bin into NOR flash
 	=> tftp $loadaddr $uboot
-	=> protect off eff80000 +$filesize
-	=> erase eff80000 +$filesize
-	=> cp.b $loadaddr eff80000 $filesize
+	=> protect off eff40000 +$filesize
+	=> erase eff40000 +$filesize
+	=> cp.b $loadaddr eff40000 $filesize
 
 3. Check SW5[1:4]= 1111 and SW5[6]=0, then power on.
 
@@ -73,9 +73,9 @@ Alternate NOR bank
 There are four banks in C29XPCIE board, example to change bank booting:
 1. Program u-boot.bin into alternate NOR bank
 	=> tftp $loadaddr $uboot
-	=> protect off e9f80000 +$filesize
-	=> erase e9f80000 +$filesize
-	=> cp.b $loadaddr e9f80000 $filesize
+	=> protect off e9f40000 +$filesize
+	=> erase e9f40000 +$filesize
+	=> cp.b $loadaddr e9f40000 $filesize
 
 2. Switch to alternate NOR bank
 	=> cpld_cmd reset altbank [bank]
@@ -86,7 +86,7 @@ There are four banks in C29XPCIE board, example to change bank booting:
 	- bank 4 on the flash 0x3000000~0x3ffffff
 	or set SW5[7]= ON/OFF and SW5[7]= ON/OFF, then power on again.
 
-Build and program u-boot to SPI flash
+Build and program U-Boot to SPI flash
 ==================================
 1. Build u-boot-spi.bin image
 	make C29xPCIE_SPIFLASH_config; make

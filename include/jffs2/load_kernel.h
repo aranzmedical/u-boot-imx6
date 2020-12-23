@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 #ifndef load_kernel_h
 #define load_kernel_h
 /*-------------------------------------------------------------------------
@@ -7,9 +8,6 @@
  * Author:        Russ Dill <Russ.Dill@asu.edu>
  * Description:   header for load kernel modules
  *-----------------------------------------------------------------------*/
-/*
- * SPDX-License-Identifier:	GPL-2.0+
- */
 
 #include <linux/list.h>
 
@@ -17,9 +15,12 @@
 #define MTD_DEV_TYPE_NOR	0x0001
 #define MTD_DEV_TYPE_NAND	0x0002
 #define MTD_DEV_TYPE_ONENAND	0x0004
+#define MTD_DEV_TYPE_SPINAND	0x0008
 
-#define MTD_DEV_TYPE(type) ((type == MTD_DEV_TYPE_NAND) ? "nand" :	\
-			(type == MTD_DEV_TYPE_ONENAND) ? "onenand" : "nor")
+#define MTD_DEV_TYPE(type) (type == MTD_DEV_TYPE_NAND ? "nand" :	\
+			    (type == MTD_DEV_TYPE_NOR ? "nor" :		\
+			     (type == MTD_DEV_TYPE_ONENAND ? "onenand" : \
+			      "spi-nand")))				\
 
 struct mtd_device {
 	struct list_head link;
@@ -32,8 +33,8 @@ struct part_info {
 	struct list_head link;
 	char *name;			/* partition name */
 	u8 auto_name;			/* set to 1 for generated name */
-	u32 size;			/* total size of the partition */
-	u32 offset;			/* offset within device */
+	u64 size;			/* total size of the partition */
+	u64 offset;			/* offset within device */
 	void *jffs2_priv;		/* used internaly by jffs2 */
 	u32 mask_flags;			/* kernel MTD mask flags */
 	u32 sector_size;		/* size of sector */
@@ -44,7 +45,7 @@ struct mtdids {
 	struct list_head link;
 	u8 type;			/* device type */
 	u8 num;				/* device number */
-	u32 size;			/* device size */
+	u64 size;			/* device size */
 	char *mtd_id;			/* linux kernel device id */
 };
 

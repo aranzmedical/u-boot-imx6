@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2011 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <phy.h>
@@ -32,6 +31,13 @@ void fman_disable_port(enum fm_port port)
 		return;
 
 	setbits_be32(&gur->devdisr, port_to_devdisr[port]);
+}
+
+void fman_enable_port(enum fm_port port)
+{
+	ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
+
+	clrbits_be32(&gur->devdisr, port_to_devdisr[port]);
 }
 
 phy_interface_t fman_port_enet_if(enum fm_port port)

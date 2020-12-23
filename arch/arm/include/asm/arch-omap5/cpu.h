@@ -1,10 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2006-2010
  * Texas Instruments, <www.ti.com>
  *
  *	Aneesh V <aneesh@ti.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _CPU_H
@@ -14,52 +13,11 @@
 #include <asm/types.h>
 #endif /* !(__KERNEL_STRICT_NAMES || __ASSEMBLY__) */
 
+#include <asm/arch/hardware.h>
+
 #ifndef __KERNEL_STRICT_NAMES
 #ifndef __ASSEMBLY__
-struct gpmc_cs {
-	u32 config1;		/* 0x00 */
-	u32 config2;		/* 0x04 */
-	u32 config3;		/* 0x08 */
-	u32 config4;		/* 0x0C */
-	u32 config5;		/* 0x10 */
-	u32 config6;		/* 0x14 */
-	u32 config7;		/* 0x18 */
-	u32 nand_cmd;		/* 0x1C */
-	u32 nand_adr;		/* 0x20 */
-	u32 nand_dat;		/* 0x24 */
-	u8 res[8];		/* blow up to 0x30 byte */
-};
-
-struct gpmc {
-	u8 res1[0x10];
-	u32 sysconfig;		/* 0x10 */
-	u8 res2[0x4];
-	u32 irqstatus;		/* 0x18 */
-	u32 irqenable;		/* 0x1C */
-	u8 res3[0x20];
-	u32 timeout_control;	/* 0x40 */
-	u8 res4[0xC];
-	u32 config;		/* 0x50 */
-	u32 status;		/* 0x54 */
-	u8 res5[0x8];	/* 0x58 */
-	struct gpmc_cs cs[8];	/* 0x60, 0x90, .. */
-	u8 res6[0x14];		/* 0x1E0 */
-	u32 ecc_config;		/* 0x1F4 */
-	u32 ecc_control;	/* 0x1F8 */
-	u32 ecc_size_config;	/* 0x1FC */
-	u32 ecc1_result;	/* 0x200 */
-	u32 ecc2_result;	/* 0x204 */
-	u32 ecc3_result;	/* 0x208 */
-	u32 ecc4_result;	/* 0x20C */
-	u32 ecc5_result;	/* 0x210 */
-	u32 ecc6_result;	/* 0x214 */
-	u32 ecc7_result;	/* 0x218 */
-	u32 ecc8_result;	/* 0x21C */
-	u32 ecc9_result;	/* 0x220 */
-};
-
-/* Used for board specific gpmc initialization */
-extern struct gpmc *gpmc_cfg;
+#include <asm/ti-common/omap_wdt.h>
 
 struct gptimer {
 	u32 tidr;		/* 0x00 r */
@@ -87,6 +45,7 @@ struct gptimer {
 /* enable sys_clk NO-prescale /1 */
 #define GPT_EN			((0x0 << 2) | (0x1 << 1) | (0x1 << 0))
 
+#define WDT_BASE                (OMAP54XX_L4_WKUP_BASE + 0x14000)
 /* Watchdog */
 #ifndef __KERNEL_STRICT_NAMES
 #ifndef __ASSEMBLY__
@@ -99,17 +58,12 @@ struct watchdog {
 #endif /* __ASSEMBLY__ */
 #endif /* __KERNEL_STRICT_NAMES */
 
-#define BIT(x)				(1 << (x))
-
 #define WD_UNLOCK1		0xAAAA
 #define WD_UNLOCK2		0x5555
 
 #define TCLR_ST			(0x1 << 0)
 #define TCLR_AR			(0x1 << 1)
 #define TCLR_PRE		(0x1 << 5)
-
-/* GPMC BASE */
-#define GPMC_BASE		(OMAP54XX_GPMC_BASE)
 
 /* I2C base */
 #define I2C_BASE1		(OMAP54XX_L4_PER_BASE + 0x70000)
@@ -163,5 +117,17 @@ struct watchdog {
 /* DRA7XX CPSW Config space */
 #define CPSW_BASE			0x48484000
 #define CPSW_MDIO_BASE			0x48485000
+
+/* gmii_sel register defines */
+#define GMII1_SEL_MII		0x0
+#define GMII1_SEL_RMII		0x1
+#define GMII1_SEL_RGMII		0x2
+#define GMII2_SEL_MII		(GMII1_SEL_MII << 4)
+#define GMII2_SEL_RMII		(GMII1_SEL_RMII << 4)
+#define GMII2_SEL_RGMII		(GMII1_SEL_RGMII << 4)
+
+#define MII_MODE_ENABLE		(GMII1_SEL_MII | GMII2_SEL_MII)
+#define RMII_MODE_ENABLE        (GMII1_SEL_RMII | GMII2_SEL_RMII)
+#define RGMII_MODE_ENABLE	(GMII1_SEL_RGMII | GMII2_SEL_RGMII)
 
 #endif /* _CPU_H */

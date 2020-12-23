@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2004, 2007, 2011 Freescale Semiconductor.
  * Srikanth Srinivasan <srikanth.srinivaan@freescale.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*  U-Boot - Startup Code for 86xx PowerPC based Embedded Boards
@@ -273,6 +272,7 @@ diag_done:
 /*	bl	l2cache_enable */
 
 	/* run 1st part of board init code (from Flash)	  */
+	li	r3, 0		/* clear boot_flag for calling board_init_f */
 	bl	board_init_f
 	sync
 
@@ -544,16 +544,6 @@ int_return:
 dc_read:
 	blr
 
-	.globl get_pvr
-get_pvr:
-	mfspr	r3, PVR
-	blr
-
-	.globl get_svr
-get_svr:
-	mfspr	r3, SVR
-	blr
-
 
 /*
  * Function:	in8
@@ -646,7 +636,7 @@ in32r:
 	blr
 
 /*
- * void relocate_code (addr_sp, gd, addr_moni)
+ * void relocate_code(addr_sp, gd, addr_moni)
  *
  * This "function" does not return, instead it continues in RAM
  * after relocating the monitor code.

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2012
  * Ивайло Димитров <freemangordon@abv.bg>
@@ -7,8 +8,6 @@
  *
  * (C) Copyright 2008
  * Dirk Behme <dirk.behme@gmail.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #ifndef _RX51_H_
 #define _RX51_H_
@@ -21,8 +20,6 @@ struct emu_hal_params_rx51 {
 	u32 param3;
 	u32 param4;
 };
-
-int print_cpuinfo(void);
 
 /*
  * IEN  - Input Enable

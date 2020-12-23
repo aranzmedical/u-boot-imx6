@@ -3,20 +3,33 @@
 # subdirectories here. Add them in the ".gitignore" file
 # in that subdirectory instead.
 #
-# Normal rules
+# Normal rules (sorted alphabetically)
 #
-
-*.rej
-*.orig
+.*
 *.a
-*.o
-*.su
-*~
-*.swp
-*.patch
+*.asn1.[ch]
 *.bin
-*.cfgtmp
-*.dts.tmp
+*.cfgout
+*.dtb
+*.dtbo
+*.dtb.S
+*.elf
+*.exe
+*.gcda
+*.gcno
+*.i
+*.img
+*.lex.c
+*.lst
+*.mod.c
+*.o
+*.o.*
+*.order
+*.patch
+*.s
+*.su
+*.swp
+*.tab.[ch]
 
 # Build tree
 /build-*
@@ -24,43 +37,32 @@
 #
 # Top-level generic files
 #
-
+fit-dtb.blob*
 /MLO*
-/SPL
+/SPL*
 /System.map
-/u-boot
-/u-boot.hex
-/u-boot.imx
-/u-boot-with-spl.imx
-/u-boot-with-nand-spl.imx
-/u-boot.map
-/u-boot.srec
-/u-boot.ldr
-/u-boot.ldr.hex
-/u-boot.ldr.srec
-/u-boot.img
-/u-boot.kwb
-/u-boot.sha1
-/u-boot.dis
-/u-boot.lds
-/u-boot.ubl
-/u-boot.ais
-/u-boot.dtb
-/u-boot.sb
-/u-boot.bd
-/u-boot.geany
+/u-boot*
+/boards.cfg
+/*.log
+
+#
+# git files that we don't want to ignore even it they are dot-files
+#
+!.gitignore
+!.mailmap
 
 #
 # Generated files
 #
+/spl/
+/tpl/
+/defconfig
 
-*.depend*
-/LOG
-/errlog
-/reloc_off
-
+#
+# Generated include files
+#
+/include/config/
 /include/generated/
-asm-offsets.s
 
 # stgit generated dirs
 patches-*
@@ -87,5 +89,6 @@ GRTAGS
 GSYMS
 GTAGS
 
-# spl ais files
-/spl/*.ais
+*.orig
+*~
+\#*#

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*------------------------------------------------------------------------
  * lan91c96.h
  *
@@ -7,8 +8,6 @@
  * Copyright (C) 2001 Standard Microsystems Corporation (SMSC)
  *       Developed by Simple Network Magic Corporation (SNMC)
  * Copyright (C) 1996 by Erik Stahlman (ES)
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  * This file contains register information and access macros for
  * the LAN91C96 single chip ethernet controller.  It is a modified
@@ -58,13 +57,7 @@ typedef unsigned long int		dword;
 
 #ifdef CONFIG_CPU_PXA25X
 
-#ifdef	CONFIG_LUBBOCK
-#define	SMC_IO_SHIFT	2
-#undef	USE_32_BIT
-
-#else
 #define	SMC_IO_SHIFT	0
-#endif
 
 #define	SMCREG(edev, r)	((edev)->iobase+((r)<<SMC_IO_SHIFT))
 

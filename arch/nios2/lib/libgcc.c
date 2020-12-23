@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * This file is part of GNU CC.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 typedef unsigned int UWtype;
@@ -548,7 +547,7 @@ __mulsi3 (SItype a, SItype b)
   while (cnt)
     {
       if (cnt & 1)
-        {
+	{
 	  res += b;
 	}
       b <<= 1;

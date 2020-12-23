@@ -1,6 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2011 The Chromium OS Authors.
-#
-# SPDX-License-Identifier:	GPL-2.0+
 #
 
 import re
@@ -21,6 +20,9 @@ class Commit:
         changes: Dict containing a list of changes (single line strings).
             The dict is indexed by change version (an integer)
         cc_list: List of people to aliases/emails to cc on this commit
+        notes: List of lines in the commit (not series) notes
+        change_id: the Change-Id: tag that was stripped from this commit
+            and can be used to generate the Message-Id.
     """
     def __init__(self, hash):
         self.hash = hash
@@ -28,6 +30,9 @@ class Commit:
         self.tags = []
         self.changes = {}
         self.cc_list = []
+        self.signoff_set = set()
+        self.notes = []
+        self.change_id = None
 
     def AddChange(self, version, info):
         """Add a new change line to the change list for a version.
@@ -70,3 +75,16 @@ class Commit:
             cc_list:    List of aliases or email addresses
         """
         self.cc_list += cc_list
+
+    def CheckDuplicateSignoff(self, signoff):
+        """Check a list of signoffs we have send for this patch
+
+        Args:
+            signoff:    Signoff line
+        Returns:
+            True if this signoff is new, False if we have already seen it.
+        """
+        if signoff in self.signoff_set:
+          return False
+        self.signoff_set.add(signoff)
+        return True

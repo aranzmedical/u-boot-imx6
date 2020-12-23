@@ -1,6 +1,5 @@
-
-/* Hand composed "Minuscule" 4x6 font, with binary data generated using
- * Perl stub.
+/* Hand composed "Minuscule" 4x6 font for code page 437, with binary data
+ * generated using Perl stub.
  *
  * Use 'perl -x mini_4x6.c < mini_4x6.c > new_version.c' to regenerate
  * binary data.
@@ -18,15 +17,15 @@
 s{((0x)?[0-9a-fA-F]+)(.*\[([\*\ ]{4})\])}{
 
 	($num,$pat,$bits) = ($1,$3,$4);
-	
+
 	$bits =~ s/([^\s0])|(.)/ defined($1) + 0 /ge;
-	
+
 	$num = ord(pack("B8", $bits));
 	$num |= $num >> 4;
 	$num = sprintf("0x%.2x", $num);
-	
+
 	#print "$num,$pat,$bits\n";
-	
+
 	$num . $pat;
 }ge;
 

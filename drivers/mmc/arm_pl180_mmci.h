@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * ARM PrimeCell MultiMedia Card Interface - PL180
  *
@@ -6,12 +7,13 @@
  * Author: Ulf Hansson <ulf.hansson@stericsson.com>
  * Author: Martin Lundholm <martin.xa.lundholm@stericsson.com>
  * Ported to drivers/mmc/ by: Matt Waddel <matt.waddel@linaro.org>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __ARM_PL180_MMCI_H__
 #define __ARM_PL180_MMCI_H__
+
+/* need definition of struct mmc_config */
+#include <mmc.h>
 
 #define COMMAND_REG_DELAY	300
 #define DATA_REG_DELAY		1000
@@ -139,6 +141,8 @@
 
 #define SDI_FIFO_BURST_SIZE	8
 
+#define STM32_MMCI_ID		0x00880180
+
 struct sdi_registers {
 	u32 power;		/* 0x00*/
 	u32 clock;		/* 0x04*/
@@ -184,8 +188,12 @@ struct pl180_mmc_host {
 	unsigned int clkdiv_init;
 	unsigned int pwr_init;
 	int version2;
+	struct mmc_config cfg;
+#ifdef CONFIG_DM_MMC
+	struct gpio_desc cd_gpio;
+#endif
 };
 
-int arm_pl180_mmci_init(struct pl180_mmc_host *);
+int arm_pl180_mmci_init(struct pl180_mmc_host *host, struct mmc **mmc);
 
 #endif

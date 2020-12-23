@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2012 Freescale Semiconductor, Inc.
  *	Roy Zang <tie-fei.zang@freescale.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <phy.h>
@@ -49,6 +48,13 @@ void fman_disable_port(enum fm_port port)
 	setbits_be32(&gur->devdisr2, port_to_devdisr[port]);
 }
 
+void fman_enable_port(enum fm_port port)
+{
+	ccsr_gur_t *gur = (void __iomem *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
+
+	clrbits_be32(&gur->devdisr2, port_to_devdisr[port]);
+}
+
 phy_interface_t fman_port_enet_if(enum fm_port port)
 {
 	ccsr_gur_t *gur = (void __iomem *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
@@ -63,6 +69,11 @@ phy_interface_t fman_port_enet_if(enum fm_port port)
 	     (is_serdes_configured(XFI_FM1_MAC9))	||
 	     (is_serdes_configured(XFI_FM1_MAC10))))
 		return PHY_INTERFACE_MODE_XGMII;
+
+	if ((port == FM1_DTSEC9 || port == FM1_DTSEC10) &&
+	    ((is_serdes_configured(XFI_FM1_MAC9)) ||
+	     (is_serdes_configured(XFI_FM1_MAC10))))
+		return PHY_INTERFACE_MODE_NONE;
 
 	if ((port == FM2_10GEC1 || port == FM2_10GEC2) &&
 	    ((is_serdes_configured(XAUI_FM2_MAC9))	||

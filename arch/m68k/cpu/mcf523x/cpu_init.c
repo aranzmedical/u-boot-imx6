@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  *
  * (C) Copyright 2000-2003
@@ -5,11 +6,10 @@
  *
  * (C) Copyright 2007, 2012 Freescale Semiconductor, Inc.
  * TsiChung Liew (Tsi-Chung.Liew@freescale.com)
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <cpu_func.h>
 #include <watchdog.h>
 #include <asm/immap.h>
 #include <asm/io.h>
@@ -18,6 +18,13 @@
 #include <config.h>
 #include <net.h>
 #include <asm/fec.h>
+#endif
+
+/* The registers in fbcs_t struct can be 16-bit for CONFIG_M5235 or 32-bit wide otherwise. */
+#ifdef CONFIG_M5235
+#define out_be_fbcs_reg		out_be16
+#else
+#define out_be_fbcs_reg		out_be32
 #endif
 
 /*
@@ -45,57 +52,57 @@ void cpu_init_f(void)
 	out_8(&gpio->par_cs, 0);
 
 #if (defined(CONFIG_SYS_CS0_BASE) && defined(CONFIG_SYS_CS0_MASK) && defined(CONFIG_SYS_CS0_CTRL))
-	out_be32(&fbcs->csar0, CONFIG_SYS_CS0_BASE);
-	out_be32(&fbcs->cscr0, CONFIG_SYS_CS0_CTRL);
+	out_be_fbcs_reg(&fbcs->csar0, CONFIG_SYS_CS0_BASE);
+	out_be_fbcs_reg(&fbcs->cscr0, CONFIG_SYS_CS0_CTRL);
 	out_be32(&fbcs->csmr0, CONFIG_SYS_CS0_MASK);
 #endif
 
 #if (defined(CONFIG_SYS_CS1_BASE) && defined(CONFIG_SYS_CS1_MASK) && defined(CONFIG_SYS_CS1_CTRL))
 	setbits_8(&gpio->par_cs, GPIO_PAR_CS_CS1);
-	out_be32(&fbcs->csar1, CONFIG_SYS_CS1_BASE);
-	out_be32(&fbcs->cscr1, CONFIG_SYS_CS1_CTRL);
+	out_be_fbcs_reg(&fbcs->csar1, CONFIG_SYS_CS1_BASE);
+	out_be_fbcs_reg(&fbcs->cscr1, CONFIG_SYS_CS1_CTRL);
 	out_be32(&fbcs->csmr1, CONFIG_SYS_CS1_MASK);
 #endif
 
 #if (defined(CONFIG_SYS_CS2_BASE) && defined(CONFIG_SYS_CS2_MASK) && defined(CONFIG_SYS_CS2_CTRL))
 	setbits_8(&gpio->par_cs, GPIO_PAR_CS_CS2);
-	out_be32(&fbcs->csar2, CONFIG_SYS_CS2_BASE);
-	out_be32(&fbcs->cscr2, CONFIG_SYS_CS2_CTRL);
+	out_be_fbcs_reg(&fbcs->csar2, CONFIG_SYS_CS2_BASE);
+	out_be_fbcs_reg(&fbcs->cscr2, CONFIG_SYS_CS2_CTRL);
 	out_be32(&fbcs->csmr2, CONFIG_SYS_CS2_MASK);
 #endif
 
 #if (defined(CONFIG_SYS_CS3_BASE) && defined(CONFIG_SYS_CS3_MASK) && defined(CONFIG_SYS_CS3_CTRL))
 	setbits_8(&gpio->par_cs, GPIO_PAR_CS_CS3);
-	out_be32(&fbcs->csar3, CONFIG_SYS_CS3_BASE);
-	out_be32(&fbcs->cscr3, CONFIG_SYS_CS3_CTRL);
+	out_be_fbcs_reg(&fbcs->csar3, CONFIG_SYS_CS3_BASE);
+	out_be_fbcs_reg(&fbcs->cscr3, CONFIG_SYS_CS3_CTRL);
 	out_be32(&fbcs->csmr3, CONFIG_SYS_CS3_MASK);
 #endif
 
 #if (defined(CONFIG_SYS_CS4_BASE) && defined(CONFIG_SYS_CS4_MASK) && defined(CONFIG_SYS_CS4_CTRL))
 	setbits_8(&gpio->par_cs, GPIO_PAR_CS_CS4);
-	out_be32(&fbcs->csar4, CONFIG_SYS_CS4_BASE);
-	out_be32(&fbcs->cscr4, CONFIG_SYS_CS4_CTRL);
+	out_be_fbcs_reg(&fbcs->csar4, CONFIG_SYS_CS4_BASE);
+	out_be_fbcs_reg(&fbcs->cscr4, CONFIG_SYS_CS4_CTRL);
 	out_be32(&fbcs->csmr4, CONFIG_SYS_CS4_MASK);
 #endif
 
 #if (defined(CONFIG_SYS_CS5_BASE) && defined(CONFIG_SYS_CS5_MASK) && defined(CONFIG_SYS_CS5_CTRL))
 	setbits_8(&gpio->par_cs, GPIO_PAR_CS_CS5);
-	out_be32(&fbcs->csar5, CONFIG_SYS_CS5_BASE);
-	out_be32(&fbcs->cscr5, CONFIG_SYS_CS5_CTRL);
+	out_be_fbcs_reg(&fbcs->csar5, CONFIG_SYS_CS5_BASE);
+	out_be_fbcs_reg(&fbcs->cscr5, CONFIG_SYS_CS5_CTRL);
 	out_be32(&fbcs->csmr5, CONFIG_SYS_CS5_MASK);
 #endif
 
 #if (defined(CONFIG_SYS_CS6_BASE) && defined(CONFIG_SYS_CS6_MASK) && defined(CONFIG_SYS_CS6_CTRL))
 	setbits_8(&gpio->par_cs, GPIO_PAR_CS_CS6);
-	out_be32(&fbcs->csar6, CONFIG_SYS_CS6_BASE);
-	out_be32(&fbcs->cscr6, CONFIG_SYS_CS6_CTRL);
+	out_be_fbcs_reg(&fbcs->csar6, CONFIG_SYS_CS6_BASE);
+	out_be_fbcs_reg(&fbcs->cscr6, CONFIG_SYS_CS6_CTRL);
 	out_be32(&fbcs->csmr6, CONFIG_SYS_CS6_MASK);
 #endif
 
 #if (defined(CONFIG_SYS_CS7_BASE) && defined(CONFIG_SYS_CS7_MASK) && defined(CONFIG_SYS_CS7_CTRL))
 	setbits_8(&gpio->par_cs, GPIO_PAR_CS_CS7);
-	out_be32(&fbcs->csar7, CONFIG_SYS_CS7_BASE);
-	out_be32(&fbcs->cscr7, CONFIG_SYS_CS7_CTRL);
+	out_be_fbcs_reg(&fbcs->csar7, CONFIG_SYS_CS7_BASE);
+	out_be_fbcs_reg(&fbcs->cscr7, CONFIG_SYS_CS7_CTRL);
 	out_be32(&fbcs->csmr7, CONFIG_SYS_CS7_MASK);
 #endif
 
@@ -150,7 +157,7 @@ void uart_port_conf(int port)
 }
 
 #if defined(CONFIG_CMD_NET)
-int fecpin_setclear(struct eth_device *dev, int setclear)
+int fecpin_setclear(fec_info_t *info, int setclear)
 {
 	gpio_t *gpio = (gpio_t *) MMAP_GPIO;
 

@@ -1,11 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2012 Nobuhiro Iwamatsu <nobuhiro.iwamatsu.yj@renesas.com>
  * (C) Copyright 2012 Renesas Solutions Corp.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <cpu_func.h>
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/gpio.h>
@@ -289,7 +289,6 @@ void adjust_core_voltage(void)
 {
 	u8 data;
 
-	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
 	data = 0x35;
 	i2c_set_bus_num(0);
 	i2c_write(0x40, 3, 1, &data, 1);
@@ -348,10 +347,6 @@ int board_init(void)
 
 	return 0;
 }
-
-const struct rmobile_sysinfo sysinfo = {
-	CONFIG_RMOBILE_BOARD_STRING
-};
 
 int dram_init(void)
 {

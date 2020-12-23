@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2009 Daniel Mack <daniel@caiaq.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 
@@ -9,7 +8,7 @@
 #include <usb.h>
 #include <asm/io.h>
 #include <asm/arch/imx-regs.h>
-#include <usb/ehci-fsl.h>
+#include <usb/ehci-ci.h>
 #include <errno.h>
 
 #include "ehci.h"
@@ -208,7 +207,8 @@ static int mxc_set_usbcontrol(int port, unsigned int flags)
 	return 0;
 }
 
-int ehci_hcd_init(int index, struct ehci_hccr **hccr, struct ehci_hcor **hcor)
+int ehci_hcd_init(int index, enum usb_init_type init,
+		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
 {
 	struct usb_ehci *ehci;
 #ifdef CONFIG_MX31

@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 1997-2002 ELTEC Elektronik AG
  * Frank Gottschling <fgottschling@eltec.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -18,9 +17,6 @@
 #ifndef _VIDEO_FB_H_
 #define _VIDEO_FB_H_
 
-#define CONSOLE_BG_COL            0x00
-#define CONSOLE_FG_COL            0xa0
-
 /*
  * Graphic Data Format (GDF) bits for VIDEO_DATA_FORMAT
  */
@@ -35,7 +31,7 @@
 /* Export Graphic Driver Control                                              */
 /******************************************************************************/
 
-typedef struct {
+typedef struct graphic_device {
     unsigned int isaBase;
     unsigned int pciBase;
     unsigned int dprBase;
@@ -91,9 +87,5 @@ void video_set_lut (
     unsigned char g,              /* green */
     unsigned char b               /* blue */
     );
-#ifdef CONFIG_VIDEO_HW_CURSOR
-void video_set_hw_cursor(int x, int y); /* x y in pixel */
-void video_init_hw_cursor(int font_width, int font_height);
-#endif
 
 #endif /*_VIDEO_FB_H_ */

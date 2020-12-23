@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2008
  * Dirk Behme <dirk.behme@gmail.com>
@@ -5,8 +6,6 @@
  * (C) Copyright 2012
  * Corscience GmbH & Co. KG, <www.corscience.de>
  * Thomas Weber <weber@corscience.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #ifndef _TRICORDER_H_
 #define _TRICORDER_H_
@@ -75,8 +74,8 @@ const omap3_sysinfo sysinfo = {
 	MUX_VAL(CP(GPMC_A6),		(IDIS | PTD | DIS | M0)) /*GPMC_A6*/\
 	MUX_VAL(CP(GPMC_A7),		(IDIS | PTD | DIS | M0)) /*GPMC_A7*/\
 	MUX_VAL(CP(GPMC_A8),		(IDIS | PTD | DIS | M0)) /*GPMC_A8*/\
-	MUX_VAL(CP(GPMC_A9),		(IDIS | PTD | DIS | M0)) /*GPMC_A9*/\
-	MUX_VAL(CP(GPMC_A10),		(IDIS | PTD | DIS | M0)) /*GPMC_A10*/\
+	MUX_VAL(CP(GPMC_A9),		(IDIS | PTU | EN  | M4)) /*GPIO 42*/\
+	MUX_VAL(CP(GPMC_A10),		(IDIS | PTU | EN  | M4)) /*GPIO 43*/\
 	MUX_VAL(CP(GPMC_D0),		(IEN  | PTD | DIS | M0)) /*GPMC_D0*/\
 	MUX_VAL(CP(GPMC_D1),		(IEN  | PTD | DIS | M0)) /*GPMC_D1*/\
 	MUX_VAL(CP(GPMC_D2),		(IEN  | PTD | DIS | M0)) /*GPMC_D2*/\

@@ -1,8 +1,13 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2009-2012 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
+
+#include "config.h"
+
+#ifndef CONFIG_SYS_MONITOR_LEN
+#define CONFIG_SYS_MONITOR_LEN	0x80000
+#endif
 
 OUTPUT_ARCH(powerpc)
 /* Do we need any of these for elf?
@@ -38,7 +43,6 @@ SECTIONS
     _GOT2_TABLE_ = .;
     KEEP(*(.got2))
     KEEP(*(.got))
-    PROVIDE(_GLOBAL_OFFSET_TABLE_ = . + 4);
     _FIXUP_TABLE_ = .;
     KEEP(*(.fixup))
   }
@@ -70,13 +74,14 @@ SECTIONS
   .data.init : { *(.data.init) }
   . = ALIGN(256);
   __init_end = .;
+  _end = .;
 
   .bootpg ADDR(.text) - 0x1000 :
   {
     KEEP(arch/powerpc/cpu/mpc85xx/start.o (.bootpg))
   } :text = 0xffff
 
-  . = ADDR(.text) + 0x80000;
+  . = ADDR(.text) + CONFIG_SYS_MONITOR_LEN;
 
   __bss_start = .;
   .bss (NOLOAD)       :

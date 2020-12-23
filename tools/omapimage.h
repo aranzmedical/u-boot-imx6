@@ -1,10 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2010
  * Linaro LTD, www.linaro.org
  * Author John Rigby <john.rigby@linaro.org>
  * Based on TI's signGP.c
- *
- * SPDX-License-Identifier:	GPL-2.0+ 
  */
 
 #ifndef _OMAPIMAGE_H_
@@ -23,11 +22,6 @@ struct ch_settings {
 	uint8_t version;
 	uint16_t reserved;
 	uint32_t flags;
-};
-
-struct gp_header {
-	uint32_t size;
-	uint32_t load_addr;
 };
 
 #define KEY_CHSETTINGS 0xC0C0C0C1

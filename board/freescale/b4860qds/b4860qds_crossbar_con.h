@@ -1,7 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2012 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CROSSBAR_CONNECTIONS_H__
@@ -24,7 +23,11 @@ static const int8_t vsc16_tx_4sfp_sgmii_34[8][2] = { {15, 7}, {0, 1},
 				{7, 8}, {9, 0}, {5, 14}, {4, 15},
 				{-1, -1}, {-1, -1} };
 
-#ifdef CONFIG_PPC_B4420
+static int8_t vsc16_tx_sfp_sgmii_aurora[8][2] = { {15, 7}, {0, 1},
+				{7, 8}, {9, 0}, {5, 14},
+				{4, 15}, {2, 12}, {12, 13} };
+
+#ifdef CONFIG_ARCH_B4420
 static int8_t vsc16_tx_sgmii_lane_cd[8][2] = { {5, 14}, {4, 15},
 		{-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}, {-1, -1} };
 #endif
@@ -46,7 +49,11 @@ static const int8_t vsc16_rx_4sfp_sgmii_34[8][2] = { {8, 15}, {0, 1},
 				{7, 8}, {1, 9}, {14, 11}, {15, 10},
 				{-1, -1}, {-1, -1} };
 
-#ifdef CONFIG_PPC_B4420
+static int8_t vsc16_rx_sfp_sgmii_aurora[8][2] = { {8, 15}, {0, 1},
+				{7, 8}, {1, 9}, {14, 11},
+				{15, 10}, {13, 3}, {12, 12} };
+
+#ifdef CONFIG_ARCH_B4420
 static int8_t vsc16_rx_sgmii_lane_cd[8][2] = { {14, 11}, {15, 10},
 		{-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}, {-1, -1} };
 #endif

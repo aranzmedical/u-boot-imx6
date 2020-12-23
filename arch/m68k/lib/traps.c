@@ -1,14 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2003
  * Josef Baumgartner <josef.baumgartner@telex.de>
  *
  * (C) Copyright 2000
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <init.h>
 #include <watchdog.h>
 #include <command.h>
 #include <asm/processor.h>
@@ -20,7 +20,7 @@ extern void _int_handler(void);
 static void show_frame(struct pt_regs *fp)
 {
 	printf ("Vector Number: %d  Format: %02x  Fault Status: %01x\n\n", (fp->vector & 0x3fc) >> 2,
-	        fp->format, (fp->vector & 0x3) | ((fp->vector & 0xc00) >> 8));
+		fp->format, (fp->vector & 0x3) | ((fp->vector & 0xc00) >> 8));
 	printf ("PC: %08lx    SR: %08lx    SP: %08lx\n", fp->pc, (long) fp->sr, (long) fp);
 	printf ("D0: %08lx    D1: %08lx    D2: %08lx    D3: %08lx\n",
 		fp->d0, fp->d1, fp->d2, fp->d3);

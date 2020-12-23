@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2004
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
@@ -15,8 +16,6 @@
  *	  Adam Richter, Gregory P. Smith;
  *	2.Original SL811 driver (hc_sl811.o) by Pei Liu <pbl@cypress.com>
  *	3.Rewrited as sl811.o by Yin Aihua <yinah:couragetech.com.cn>
- *
- * SPDX-License-Identifier:	GPL-2.0+ 
  */
 
 #include <common.h>
@@ -194,7 +193,7 @@ static int sl811_hc_reset(void)
 	return 1;
 }
 
-int usb_lowlevel_init(int index, void **controller)
+int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 {
 	root_hub_devnum = 0;
 	sl811_hc_reset();
@@ -385,7 +384,7 @@ int submit_control_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
 }
 
 int submit_int_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
-		   int len, int interval)
+		   int len, int interval, bool nonblock)
 {
 	PDEBUG(0, "dev = %p pipe = %#lx buf = %p size = %d int = %d\n", dev, pipe,
 	       buffer, len, interval);

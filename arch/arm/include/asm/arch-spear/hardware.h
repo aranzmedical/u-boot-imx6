@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * (C) Copyright 2009
- * Vipin Kumar, STMicroelectronics, <vipin.kumar@st.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
+ * Copyright (C) 2009, STMicroelectronics - All Rights Reserved
+ * Author(s): Vipin Kumar, <vipin.kumar@st.com> for STMicroelectronics.
  */
 
 #ifndef _ASM_ARCH_HARDWARE_H
@@ -11,6 +10,8 @@
 #define CONFIG_SYS_USBD_BASE			0xE1100000
 #define CONFIG_SYS_PLUG_BASE			0xE1200000
 #define CONFIG_SYS_FIFO_BASE			0xE1000800
+#define CONFIG_SYS_UHC0_EHCI_BASE		0xE1800000
+#define CONFIG_SYS_UHC1_EHCI_BASE		0xE2000000
 #define CONFIG_SYS_SMI_BASE			0xFC000000
 #define CONFIG_SPEAR_SYSCNTLBASE		0xFCA00000
 #define CONFIG_SPEAR_TIMERBASE			0xFC800000
@@ -26,7 +27,6 @@
 #define CONFIG_SYS_NAND_ALE			(1 << 17)
 
 #if defined(CONFIG_SPEAR600)
-#define CONFIG_SYS_I2C_BASE			0xD0200000
 #define CONFIG_SYS_FSMC_BASE			0xD1800000
 #define CONFIG_FSMC_NAND_BASE			0xD2000000
 
@@ -42,11 +42,9 @@
 #define CONFIG_SPEAR_MPMCREGS			100
 
 #elif defined(CONFIG_SPEAR300)
-#define CONFIG_SYS_I2C_BASE			0xD0180000
 #define CONFIG_SYS_FSMC_BASE			0x94000000
 
 #elif defined(CONFIG_SPEAR310)
-#define CONFIG_SYS_I2C_BASE			0xD0180000
 #define CONFIG_SYS_FSMC_BASE			0x44000000
 
 #undef CONFIG_SYS_NAND_CLE
@@ -63,7 +61,6 @@
 #define CONFIG_SYS_MACB3_BASE			0xB1800000
 
 #elif defined(CONFIG_SPEAR320)
-#define CONFIG_SYS_I2C_BASE			0xD0180000
 #define CONFIG_SYS_FSMC_BASE			0x4C000000
 
 #define CONFIG_SPEAR_EMIBASE			0x40000000
