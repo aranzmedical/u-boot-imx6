@@ -8,9 +8,13 @@
 #ifndef __SILHOUETTESTAR2_CONFIG_H
 #define __SILHOUETTESTAR2_CONFIG_H
 
+#ifdef CONFIG_SPL
+#include "imx6_spl.h"
+#endif
+
 #include "mx6_common.h"
 
-#include "imx6_spl.h"
+#undef CONFIG_LDO_BYPASS_CHECK
 
 #define CONFIG_IMX_THERMAL
 
@@ -97,8 +101,6 @@
 		"fi\0" \
 	BOOTENV
 
-#define CONFIG_BOOTCOMMAND "run boot_aranz"
-
 #define BOOT_TARGET_DEVICES(func) func(MMC, mmc, 0)
 
 #include <config_distro_bootcmd.h>
@@ -117,9 +119,4 @@
 	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
 #define CONFIG_SYS_INIT_SP_ADDR \
 	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
-
-/* Environment organization */
-#define CONFIG_ENV_SIZE			(8 * 1024)
-#define CONFIG_ENV_OFFSET		(8 * 64 * 1024)
-
 #endif                         /* __SILHOUETTESTAR2_CONFIG_H */

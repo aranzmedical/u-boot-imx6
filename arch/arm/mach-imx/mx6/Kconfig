@@ -423,6 +423,15 @@ config TARGET_MX6Q_ENGICAM
 	select SUPPORT_SPL
 	imply CMD_DM
 
+config TARGET_CUSTOM_SILHOUETTESTAR2
+	bool "ARANZ SilhouetteStar2"
+	select BOARD_LATE_INIT
+	select DM
+	select DM_THERMAL
+	select MX6QDL	
+	select SUPPORT_SPL
+	imply CMD_DM
+
 config TARGET_MX6SABREAUTO
 	bool "mx6sabreauto"
 	select BOARD_EARLY_INIT_F
@@ -840,6 +849,7 @@ endchoice
 config SYS_SOC
 	default "mx6"
 
+source "board/aranz/silhouettestar2/Kconfig"
 source "board/ge/bx50v3/Kconfig"
 source "board/advantech/dms-ba16/Kconfig"
 source "board/aristainetos/Kconfig"
