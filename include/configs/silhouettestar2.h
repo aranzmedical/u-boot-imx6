@@ -21,9 +21,6 @@
 #define CONFIG_SYS_MALLOC_LEN		(10 * SZ_1M)
 #define CONFIG_MXC_UART
 
-/* MMC Configs */
-#define CONFIG_SYS_FSL_ESDHC_ADDR	USDHC2_BASE_ADDR
-
 #define CONFIG_PREBOOT \
 	"setenv stdin  serial; " \
 	"setenv stdout serial; " \
@@ -33,11 +30,19 @@
 
 #define CONFIG_MXC_UART_BASE	UART1_BASE
 #define CONSOLE_DEV	"ttymxc0"
-#define CONFIG_SYS_FSL_USDHC_NUM	1
+#define CONFIG_SYS_FSL_USDHC_NUM	2
 #define CONFIG_SYS_MMC_ENV_DEV		0	/* SDHC2 */
+
+#ifdef CONFIG_SPL_BOOT_DEVICE_MMC
+#define CONFIG_SYS_FSL_ESDHC_ADDR	USDHC3_BASE_ADDR
+#else
+#define CONFIG_SYS_FSL_ESDHC_ADDR	USDHC2_BASE_ADDR
+#endif
 
 #ifndef CONFIG_SPL_BUILD
 #define CONFIG_EXTRA_ENV_SETTINGS \
+  "som_rev=undefined\0" \
+	"has_emmc=undefined\0" \
 	"fdtfile=undefined\0" \
 	"fdt_addr_r=0x18000000\0" \
 	"fdt_addr=0x18000000\0" \
@@ -53,29 +58,29 @@
 	"bootm_size=0x10000000\0" \
 	"finduuid=part uuid mmc 0:1 uuid\0" \
   "fdt_addr=0x18000000\0" \
-  "loadbootenv=load mmc ${mmcdev}:1 ${loadaddr} uEnv.txt;\0" \
-  "importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
-    "env import -t ${loadaddr} ${filesize};\0" \
   "loadftdfilefromboot=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /boot/${fdt_file};\0" \
   "loadftdfile=load mmc ${mmcdev}:1 ${fdt_addr} ${fdt_file};\0" \
   "loadzImagefilefromboot=load mmc ${mmcdev}:${mmcpart} ${loadaddr} /boot/zImage;\0" \
   "loadzImagefile=load mmc ${mmcdev}:1 ${loadaddr} zImage;\0" \
   "boot_aranz=" \
     "setenv bootargs console=${console},${baudrate} quiet coherent_pool=180M root=${mmcroot} rootwait ro rootfstype=ext4 nohlt; " \
-    "if run loadbootenv; then " \
-      "run importbootenv; " \
-    "fi; " \
     "if test ${board_rev} = MX6DL; then " \
       "setenv fdt_prefix imx6dl; " \
     "else " \
       "setenv fdt_prefix imx6q; " \
     "fi; " \
-    "setenv fdt_file ${fdt_prefix}-silhouettestar${uSom_version}.dtb;" \
+    "if test ${som_rev} = V15; then " \
+			"setenv fdtsuffix -som-v15; fi; " \
+		"if test ${has_emmc} = yes; then " \
+			"setenv emmcsuffix -emmc; fi; " \
+    "setenv fdt_file ${fdt_prefix}-silhouettestar{emmcsuffix}${fdtsuffix}.dtb;" \
     "if run loadftdfilefromboot; then " \
       "echo Loaded Devicetree from mmc${mmcdev}:${mmcpart} /boot/${fdt_file};" \
     "else " \
       "if run loadftdfile; then " \
         "echo Loaded Devicetree from Boot Partition.;" \
+      "else " \
+        "echo WARNING: Could not determine dtb to use;" \
       "fi; " \
     "fi; " \
     "if run loadzImagefilefromboot; then " \
@@ -83,6 +88,8 @@
     "else " \
       "if run loadzImagefile; then " \
         "echo Loaded Linux Kernel from Boot Partition.; " \
+      "else " \
+        "echo WARNING: Could not determine Linux Kernel to load;" \
       "fi; " \
     "fi; " \
     "bootz ${loadaddr} - ${fdt_addr};\0" \
@@ -101,7 +108,11 @@
 		"fi\0" \
 	BOOTENV
 
-#define BOOT_TARGET_DEVICES(func) func(MMC, mmc, 0)
+#ifdef CONFIG_SPL_BOOT_DEVICE_MMC
+#define BOOT_TARGET_DEVICES(func) func(MMC, mmc, 1) func(MMC, mmc, 0)
+#else
+#define BOOT_TARGET_DEVICES(func) func(MMC, mmc, 0) func(MMC, mmc, 1)
+#endif
 
 #include <config_distro_bootcmd.h>
 
