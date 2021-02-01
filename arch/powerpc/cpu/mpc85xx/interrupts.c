@@ -20,7 +20,7 @@
 #include <post.h>
 #endif
 
-int interrupt_init_cpu(unsigned int *decrementer_count)
+void interrupt_init_cpu(unsigned *decrementer_count)
 {
 	ccsr_pic_t __iomem *pic = (void *)CONFIG_SYS_MPC8xxx_PIC_ADDR;
 
@@ -42,7 +42,7 @@ int interrupt_init_cpu(unsigned int *decrementer_count)
 	*decrementer_count = get_tbclk() / CONFIG_SYS_HZ;
 
 	/* PIE is same as DIE, dec interrupt enable */
-	mtspr(SPRN_TCR, TCR_PIE);
+	mtspr(SPRN_TCR, mfspr(SPRN_TCR) | TCR_PIE);
 
 #ifdef CONFIG_INTERRUPTS
 	pic->iivpr1 = 0x810001;	/* 50220 enable ecm interrupts */
@@ -77,8 +77,6 @@ int interrupt_init_cpu(unsigned int *decrementer_count)
 #ifdef CONFIG_POST
 	post_word_store(post_word);
 #endif
-
-	return (0);
 }
 
 /* Install and free a interrupt handler. Not implemented yet. */

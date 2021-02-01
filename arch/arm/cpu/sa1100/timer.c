@@ -13,11 +13,6 @@
 #include <common.h>
 #include <SA-1100.h>
 
-int timer_init (void)
-{
-	return 0;
-}
-
 ulong get_timer (ulong base)
 {
 	return get_timer_masked ();
@@ -71,8 +66,5 @@ unsigned long long get_ticks(void)
  */
 ulong get_tbclk (void)
 {
-	ulong tbclk;
-
-	tbclk = CONFIG_SYS_HZ;
-	return tbclk;
+	return CONFIG_SYS_HZ;
 }

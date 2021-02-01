@@ -55,7 +55,7 @@ void spi_init(void)
 	 * some registers
 	 */
 	spi->mode = SPI_MODE_REV | SPI_MODE_MS | SPI_MODE_EN;
-	spi->mode = (spi->mode & 0xfff0ffff) | (1 << 16); /* Use SYSCLK / 8
+	spi->mode = (spi->mode & 0xfff0ffff) | BIT(16); /* Use SYSCLK / 8
 							     (16.67MHz typ.) */
 	spi->event = 0xffffffff;	/* Clear all SPI events */
 	spi->mask = 0x00000000;	/* Mask  all SPI interrupts */
@@ -110,10 +110,10 @@ int spi_xfer(struct spi_slave *slave, unsigned int bitlen, const void *dout,
 		if (bitlen <= 16) {
 			if (bitlen <= 4)
 				spi->mode = (spi->mode & 0xff0fffff) |
-				            (3 << 20);
+					    (3 << 20);
 			else
 				spi->mode = (spi->mode & 0xff0fffff) |
-				            ((bitlen - 1) << 20);
+					    ((bitlen - 1) << 20);
 		} else {
 			spi->mode = (spi->mode & 0xff0fffff);
 			/* Set up the next iteration if sending > 32 bits */

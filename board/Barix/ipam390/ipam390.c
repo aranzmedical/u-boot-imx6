@@ -20,15 +20,16 @@
 #include <spi.h>
 #include <spi_flash.h>
 #include <asm/arch/hardware.h>
-#include <asm/arch/emif_defs.h>
+#include <asm/ti-common/davinci_nand.h>
 #include <asm/arch/emac_defs.h>
 #include <asm/arch/pinmux_defs.h>
 #include <asm/io.h>
 #include <asm/arch/davinci_misc.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/gpio.h>
 #include <hwconfig.h>
 #include <bootstage.h>
+#include <asm/mach-types.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -156,7 +157,7 @@ u32 get_board_rev(void)
 	u32 maxcpuclk = CONFIG_DA850_EVM_MAX_CPU_CLK;
 	u32 rev = 0;
 
-	s = getenv("maxcpuclk");
+	s = env_get("maxcpuclk");
 	if (s)
 		maxcpuclk = simple_strtoul(s, NULL, 10);
 
@@ -188,9 +189,7 @@ int board_early_init_f(void)
 
 int board_init(void)
 {
-#ifndef CONFIG_USE_IRQ
 	irq_init();
-#endif
 
 	/* arch number of the board */
 	gd->bd->bi_arch_number = MACH_TYPE_DAVINCI_DA850_EVM;
@@ -264,7 +263,7 @@ void show_boot_progress(int status)
 	static int green;
 
 	if (red == 0)
-		red = init_led(CONFIG_IPAM390_GPIO_LED_RED, "red", LED_OFF);
+		red = init_led(CONFIG_IPAM390_GPIO_LED_RED, "red", LED_ON);
 	if (red != CONFIG_IPAM390_GPIO_LED_RED)
 		return;
 	if (green == 0)
@@ -277,10 +276,10 @@ void show_boot_progress(int status)
 	case BOOTSTAGE_ID_RUN_OS:
 		/*
 		 * set normal state
-		 * LED Red  : off
+		 * LED Red  : on
 		 * LED green: off
 		 */
-		gpio_set_value(red, LED_OFF);
+		gpio_set_value(red, LED_ON);
 		gpio_set_value(green, LED_OFF);
 		break;
 	case BOOTSTAGE_ID_MAIN_LOOP:
@@ -326,23 +325,12 @@ int spl_start_uboot(void)
 	if (!bootmode)
 		if (ret == 0)
 			bootmode = 1;
-	if (bootmode) {
-		/*
-		 * Booting U-Boot
-		 * LED Red  : on
-		 * LED green: off
-		 */
-		init_led(CONFIG_IPAM390_GPIO_LED_RED, "red", LED_ON);
-		init_led(CONFIG_IPAM390_GPIO_LED_GREEN, "green", LED_OFF);
-	} else {
-		/*
-		 * Booting Linux
-		 * LED Red  : off
-		 * LED green: off
-		 */
-		init_led(CONFIG_IPAM390_GPIO_LED_RED, "red", LED_OFF);
-		init_led(CONFIG_IPAM390_GPIO_LED_GREEN, "green", LED_OFF);
-	}
+	/*
+	 * LED red  : on
+	 * LED green: off
+	 */
+	init_led(CONFIG_IPAM390_GPIO_LED_RED, "red", LED_ON);
+	init_led(CONFIG_IPAM390_GPIO_LED_GREEN, "green", LED_OFF);
 	return bootmode;
 }
 #endif

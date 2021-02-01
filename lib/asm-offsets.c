@@ -28,8 +28,9 @@ int main(void)
 	DEFINE(GD_SIZE, sizeof(struct global_data));
 
 	DEFINE(GD_BD, offsetof(struct global_data, bd));
-
-#if defined(CONFIG_ARM)
+#if CONFIG_VAL(SYS_MALLOC_F_LEN)
+	DEFINE(GD_MALLOC_BASE, offsetof(struct global_data, malloc_base));
+#endif
 
 	DEFINE(GD_RELOCADDR, offsetof(struct global_data, relocaddr));
 
@@ -37,7 +38,7 @@ int main(void)
 
 	DEFINE(GD_START_ADDR_SP, offsetof(struct global_data, start_addr_sp));
 
-#endif
+	DEFINE(GD_NEW_GD, offsetof(struct global_data, new_gd));
 
 	return 0;
 }

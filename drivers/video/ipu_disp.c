@@ -15,7 +15,8 @@
 
 #include <common.h>
 #include <linux/types.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
+#include <linux/iopoll.h>
 #include <asm/io.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
@@ -377,7 +378,7 @@ static struct dp_csc_param_t dp_csc_array[CSC_NUM][CSC_NUM] = {
 static enum csc_type_t fg_csc_type = CSC_NONE, bg_csc_type = CSC_NONE;
 static int color_key_4rgb = 1;
 
-void ipu_dp_csc_setup(int dp, struct dp_csc_param_t dp_csc_param,
+static void ipu_dp_csc_setup(int dp, struct dp_csc_param_t dp_csc_param,
 			unsigned char srm_mode_update)
 {
 	u32 reg;
@@ -605,28 +606,15 @@ void ipu_dc_uninit(int dc_chan)
 	}
 }
 
-int ipu_chan_is_interlaced(ipu_channel_t channel)
-{
-	if (channel == MEM_DC_SYNC)
-		return !!(__raw_readl(DC_WR_CH_CONF_1) &
-			  DC_WR_CH_CONF_FIELD_MODE);
-	else if ((channel == MEM_BG_SYNC) || (channel == MEM_FG_SYNC))
-		return !!(__raw_readl(DC_WR_CH_CONF_5) &
-			  DC_WR_CH_CONF_FIELD_MODE);
-	return 0;
-}
-
 void ipu_dp_dc_enable(ipu_channel_t channel)
 {
 	int di;
 	uint32_t reg;
 	uint32_t dc_chan;
 
-	if (channel == MEM_FG_SYNC)
-		dc_chan = 5;
 	if (channel == MEM_DC_SYNC)
 		dc_chan = 1;
-	else if (channel == MEM_BG_SYNC)
+	else if ((channel == MEM_BG_SYNC) || (channel == MEM_FG_SYNC))
 		dc_chan = 5;
 	else
 		return;
@@ -665,7 +653,6 @@ void ipu_dp_dc_disable(ipu_channel_t channel, unsigned char swap)
 	uint32_t reg;
 	uint32_t csc;
 	uint32_t dc_chan = 0;
-	int timeout = 50;
 	int irq = 0;
 
 	dc_swap = swap;
@@ -677,6 +664,7 @@ void ipu_dp_dc_disable(ipu_channel_t channel, unsigned char swap)
 		dc_chan = 5;
 		irq = IPU_IRQ_DP_SF_END;
 	} else if (channel == MEM_FG_SYNC) {
+		uint32_t tmp;
 		/* Disable FG channel */
 		dc_chan = 5;
 
@@ -691,28 +679,18 @@ void ipu_dp_dc_disable(ipu_channel_t channel, unsigned char swap)
 		reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
 		__raw_writel(reg, IPU_SRM_PRI2);
 
-		timeout = 50;
-
 		/*
 		 * Wait for DC triple buffer to empty,
 		 * this check is useful for tv overlay.
 		 */
 		if (g_dc_di_assignment[dc_chan] == 0)
-			while ((__raw_readl(DC_STAT) & 0x00000002)
-			       != 0x00000002) {
-				udelay(2000);
-				timeout -= 2;
-				if (timeout <= 0)
-					break;
-			}
+			readl_poll_timeout(DC_STAT, tmp,
+					   (tmp & 0x00000002) != 0x00000002,
+					   500000, 2000);
 		else if (g_dc_di_assignment[dc_chan] == 1)
-			while ((__raw_readl(DC_STAT) & 0x00000020)
-			       != 0x00000020) {
-				udelay(2000);
-				timeout -= 2;
-				if (timeout <= 0)
-					break;
-			}
+			readl_poll_timeout(DC_STAT, tmp,
+					   (tmp & 0x00000020) != 0x00000020,
+					   500000, 2000);
 		return;
 	} else {
 		return;
@@ -728,14 +706,8 @@ void ipu_dp_dc_disable(ipu_channel_t channel, unsigned char swap)
 	} else {
 		/* Make sure that we leave at the irq starting edge */
 		__raw_writel(IPUIRQ_2_MASK(irq), IPUIRQ_2_STATREG(irq));
-		timeout = 50;
-		do {
-			reg = __raw_readl(IPUIRQ_2_STATREG(irq));
-			udelay(2000);
-			timeout -= 2;
-			if (timeout <= 0)
-				break;
-		} while (!(reg & IPUIRQ_2_MASK(irq)));
+		readl_poll_timeout(IPUIRQ_2_STATREG(irq), reg,
+				   !(reg & IPUIRQ_2_MASK(irq)), 500000, 2000);
 
 		reg = __raw_readl(DC_WR_CH_CONF(dc_chan));
 		reg &= ~DC_WR_CH_CONF_PROG_TYPE_MASK;
@@ -787,7 +759,7 @@ void ipu_init_dc_mappings(void)
 	ipu_dc_map_config(4, 2, 21, 0xFC);
 }
 
-int ipu_pixfmt_to_map(uint32_t fmt)
+static int ipu_pixfmt_to_map(uint32_t fmt)
 {
 	switch (fmt) {
 	case IPU_PIX_FMT_GENERIC:
@@ -1135,7 +1107,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 		reg &= 0x0000FFFF;
 		__raw_writel(reg, DI_STP_REP(disp, 6));
 		__raw_writel(0, DI_STP_REP(disp, 7));
-		__raw_writel(0, DI_STP_REP(disp, 9));
+		__raw_writel(0, DI_STP_REP9(disp));
 
 		/* Init template microcode */
 		if (disp) {

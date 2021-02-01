@@ -34,8 +34,9 @@ SECTIONS
 	.text :
 	{
 		*(.__image_copy_start)
+		*(.vectors)
 		CPUDIR/start.o (.text*)
-		board/ti/am335x/libam335x.o (.text*)
+		board/ti/am335x/built-in.o (.text*)
 		*(.text*)
 	}
 
@@ -54,6 +55,36 @@ SECTIONS
 	. = ALIGN(4);
 	.u_boot_list : {
 		KEEP(*(SORT(.u_boot_list*)));
+	}
+
+	. = ALIGN(4);
+
+	.__efi_runtime_start : {
+		*(.__efi_runtime_start)
+	}
+
+	.efi_runtime : {
+		*(efi_runtime_text)
+		*(efi_runtime_data)
+	}
+
+	.__efi_runtime_stop : {
+		*(.__efi_runtime_stop)
+	}
+
+	.efi_runtime_rel_start :
+	{
+		*(.__efi_runtime_rel_start)
+	}
+
+	.efi_runtime_rel : {
+		*(.relefi_runtime_text)
+		*(.relefi_runtime_data)
+	}
+
+	.efi_runtime_rel_stop :
+	{
+		*(.__efi_runtime_rel_stop)
 	}
 
 	. = ALIGN(4);
@@ -77,7 +108,14 @@ SECTIONS
 		*(.__rel_dyn_end)
 	}
 
-	_end = .;
+	.hash : { *(.hash*) }
+
+	.end :
+	{
+		*(.__end)
+	}
+
+	_image_binary_end = .;
 
 	/*
 	 * Deprecated: this MMU section is used by pxa at present but
@@ -108,10 +146,13 @@ SECTIONS
 		KEEP(*(.__bss_end));
 	}
 
-	/DISCARD/ : { *(.dynsym) }
-	/DISCARD/ : { *(.dynstr*) }
-	/DISCARD/ : { *(.dynamic*) }
-	/DISCARD/ : { *(.plt*) }
-	/DISCARD/ : { *(.interp*) }
-	/DISCARD/ : { *(.gnu*) }
+	.dynsym _image_binary_end : { *(.dynsym) }
+	.dynbss : { *(.dynbss) }
+	.dynstr : { *(.dynstr*) }
+	.dynamic : { *(.dynamic*) }
+	.gnu.hash : { *(.gnu.hash) }
+	.plt : { *(.plt*) }
+	.interp : { *(.interp*) }
+	.gnu : { *(.gnu*) }
+	.ARM.exidx : { *(.ARM.exidx*) }
 }

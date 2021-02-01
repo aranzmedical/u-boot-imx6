@@ -24,6 +24,24 @@
 #define LDO1_CTRL		0x50
 #define LDO1_VOLTAGE		0x51
 
+/* LDO1 control/voltage for LP873x */
+#define LP873X_LDO1_ADDR	0x60
+#define LP873X_LDO1_CTRL	0x9
+#define LP873X_LDO1_VOLTAGE	0xa
+#define LP873X_LDO_VOLT_3V0	0x19
+#define LP873X_LDO_VOLT_1V8	0xa
+#define LP873X_LDO_CTRL_EN	(0x1 << 0)
+#define LP873X_LDO_CTRL_EN_PINCTRL	(0x1 << 1)
+#define LP873X_LDO_CTRL_RDIS_EN	(0x1 << 2)
+
+/* LDO2 control/voltage */
+#define LDO2_CTRL		0x52
+#define LDO2_VOLTAGE		0x53
+
+/* LDO2 control/voltage */
+#define LDO4_CTRL		0x5e
+#define LDO4_VOLTAGE		0x5f
+
 /* LDO9 control/voltage */
 #define LDO9_CTRL		0x60
 #define LDO9_VOLTAGE		0x61
@@ -31,6 +49,7 @@
 /* LDOUSB control/voltage */
 #define LDOUSB_CTRL		0x64
 #define LDOUSB_VOLTAGE		0x65
+#define LDO_CTRL		0x6a
 
 /* Control of 32 kHz audio clock */
 #define CLK32KGAUDIO_CTRL	0xd5
@@ -61,6 +80,10 @@
 /* SMPS9_CTRL */
 #define SMPS9_CTRL		0x38
 #define SMPS9_VOLTAGE		0x3b
+
+/* SMPS10_CTRL */
+#define SMPS10_CTRL		0x3c
+#define SMPS10_MODE_ACTIVE_D	0x0d
 
 /* Bit field definitions for SMPSx_CTRL */
 #define SMPS_MODE_ACT_AUTO	1
@@ -110,9 +133,11 @@ static inline int palmas_i2c_read_u8(u8 chip_no, u8 reg, u8 *val)
 }
 
 void palmas_init_settings(void);
-int palmas_mmc1_poweron_ldo(void);
+int palmas_mmc1_poweron_ldo(uint ldo_volt, uint ldo_ctrl, uint voltage);
+int lp873x_mmc1_poweron_ldo(uint voltage);
 int twl603x_mmc1_set_ldo9(u8 vsel);
 int twl603x_audio_power(u8 on);
 int twl603x_enable_bb_charge(u8 bb_fields);
+int palmas_enable_ss_ldo(void);
 
 #endif /* PALMAS_H */
