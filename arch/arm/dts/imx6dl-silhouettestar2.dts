@@ -42,7 +42,7 @@
 /dts-v1/;
 
 #include "imx6dl.dtsi"
-#include "imx6qdl-u-boot.dtsi"
+#include "imx6qdl-icore.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 
 / {
