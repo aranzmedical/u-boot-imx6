@@ -1,0 +1,15 @@
+if TARGET_CUSTOM_SILHOUETTESTAR2
+
+config SYS_BOARD
+	default "silhouettestar2"
+
+config SYS_VENDOR
+	default "aranz"
+
+config SYS_CONFIG_NAME
+	default "silhouettestar2"
+
+config SYS_TEXT_BASE
+    default 0x17800000
+
+endif
