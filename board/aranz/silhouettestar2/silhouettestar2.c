@@ -597,33 +597,33 @@ static void spl_dram_init(int width)
 		mx6_dram_cfg(&sysinfo, &mx6dl_512m_mmcd_calib, &mem_ddr_2g);
 }
 
-void board_init_f(ulong dummy)
-{
-	/* setup AIPS and disable watchdog */
-	arch_cpu_init();
+// void board_init_f(ulong dummy)
+// {
+// 	/* setup AIPS and disable watchdog */
+// 	arch_cpu_init();
 
-	ccgr_init();
-	gpr_init();
+// 	ccgr_init();
+// 	gpr_init();
 
-	/* iomux and setup of i2c */
-	board_early_init_f();
+// 	/* iomux and setup of i2c */
+// 	board_early_init_f();
 
-	/* setup GP timer */
-	timer_init();
+// 	/* setup GP timer */
+// 	timer_init();
 
-	/* UART clocks enabled and gd valid - init serial console */
-	preloader_console_init();
+// 	/* UART clocks enabled and gd valid - init serial console */
+// 	preloader_console_init();
 
-	/* DDR initialization */
-	if (is_cpu_type(MXC_CPU_MX6SOLO))
-		spl_dram_init(32);
-	else
-		spl_dram_init(64);
+// 	/* DDR initialization */
+// 	if (is_cpu_type(MXC_CPU_MX6SOLO))
+// 		spl_dram_init(32);
+// 	else
+// 		spl_dram_init(64);
 
-	/* Clear the BSS. */
-	memset(__bss_start, 0, __bss_end - __bss_start);
+// 	/* Clear the BSS. */
+// 	memset(__bss_start, 0, __bss_end - __bss_start);
 
-	/* load/boot image from boot device */
-	board_init_r(NULL, 0);
-}
+// 	/* load/boot image from boot device */
+// 	board_init_r(NULL, 0);
+// }
 #endif
