@@ -16,8 +16,6 @@
 
 #undef CONFIG_LDO_BYPASS_CHECK
 
-#define CONFIG_IMX_THERMAL
-
 #define CONFIG_SYS_MALLOC_LEN		(10 * SZ_1M)
 #define CONFIG_MXC_UART
 
@@ -38,6 +36,9 @@
 #else
 #define CONFIG_SYS_FSL_ESDHC_ADDR	USDHC2_BASE_ADDR
 #endif
+
+#define CONFIG_LOADADDR			    0x12000000
+#define CONFIG_SYS_TEXT_BASE		0x17800000
 
 #ifndef CONFIG_SPL_BUILD
 #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -140,7 +141,7 @@
 #define CONFIG_SYS_MMC_ENV_DEV		1
 #define CONFIG_SYS_MMC_ENV_PART		1
 #else
-#define CONFIG_SYS_MMC_ENV_DEV		0  /* SDHC2 */
+#define CONFIG_SYS_MMC_ENV_DEV		0  /* SDHC2 This was 0*/
 #endif
 #endif
 

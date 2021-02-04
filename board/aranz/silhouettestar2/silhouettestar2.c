@@ -376,35 +376,6 @@ int board_late_init(void)
 
 #ifdef CONFIG_SPL_BUILD
 #include <asm/arch/mx6-ddr.h>
-static const struct mx6dq_iomux_ddr_regs mx6q_ddr_ioregs = {
-	.dram_sdclk_0 =  0x00020030,
-	.dram_sdclk_1 =  0x00020030,
-	.dram_cas =  0x00020030,
-	.dram_ras =  0x00020030,
-	.dram_reset =  0x000c0030,
-	.dram_sdcke0 =  0x00003000,
-	.dram_sdcke1 =  0x00003000,
-	.dram_sdba2 =  0x00000000,
-	.dram_sdodt0 =  0x00003030,
-	.dram_sdodt1 =  0x00003030,
-	.dram_sdqs0 =  0x00000030,
-	.dram_sdqs1 =  0x00000030,
-	.dram_sdqs2 =  0x00000030,
-	.dram_sdqs3 =  0x00000030,
-	.dram_sdqs4 =  0x00000030,
-	.dram_sdqs5 =  0x00000030,
-	.dram_sdqs6 =  0x00000030,
-	.dram_sdqs7 =  0x00000030,
-	.dram_dqm0 =  0x00020030,
-	.dram_dqm1 =  0x00020030,
-	.dram_dqm2 =  0x00020030,
-	.dram_dqm3 =  0x00020030,
-	.dram_dqm4 =  0x00020030,
-	.dram_dqm5 =  0x00020030,
-	.dram_dqm6 =  0x00020030,
-	.dram_dqm7 =  0x00020030,
-};
-
 static const struct mx6sdl_iomux_ddr_regs mx6dl_ddr_ioregs = {
 	.dram_sdclk_0 = 0x00000028,
 	.dram_sdclk_1 = 0x00000028,
@@ -434,23 +405,6 @@ static const struct mx6sdl_iomux_ddr_regs mx6dl_ddr_ioregs = {
 	.dram_dqm7 =	0x00000028,
 };
 
-static const struct mx6dq_iomux_grp_regs mx6q_grp_ioregs = {
-	.grp_ddr_type =  0x000C0000,
-	.grp_ddrmode_ctl =  0x00020000,
-	.grp_ddrpke =  0x00000000,
-	.grp_addds =  0x00000030,
-	.grp_ctlds =  0x00000030,
-	.grp_ddrmode =  0x00020000,
-	.grp_b0ds =  0x00000030,
-	.grp_b1ds =  0x00000030,
-	.grp_b2ds =  0x00000030,
-	.grp_b3ds =  0x00000030,
-	.grp_b4ds =  0x00000030,
-	.grp_b5ds =  0x00000030,
-	.grp_b6ds =  0x00000030,
-	.grp_b7ds =  0x00000030,
-};
-
 static const struct mx6sdl_iomux_grp_regs mx6sdl_grp_ioregs = {
 	.grp_ddr_type = 0x000c0000,
 	.grp_ddrmode_ctl = 0x00020000,
@@ -466,48 +420,6 @@ static const struct mx6sdl_iomux_grp_regs mx6sdl_grp_ioregs = {
 	.grp_b5ds = 0x00000028,
 	.grp_b6ds = 0x00000028,
 	.grp_b7ds = 0x00000028,
-};
-
-/* microSOM with Dual processor and 1GB memory */
-static const struct mx6_mmdc_calibration mx6q_1g_mmcd_calib = {
-	.p0_mpwldectrl0 =  0x00000000,
-	.p0_mpwldectrl1 =  0x00000000,
-	.p1_mpwldectrl0 =  0x00000000,
-	.p1_mpwldectrl1 =  0x00000000,
-	.p0_mpdgctrl0 =    0x0314031c,
-	.p0_mpdgctrl1 =    0x023e0304,
-	.p1_mpdgctrl0 =    0x03240330,
-	.p1_mpdgctrl1 =    0x03180260,
-	.p0_mprddlctl =    0x3630323c,
-	.p1_mprddlctl =    0x3436283a,
-	.p0_mpwrdlctl =    0x36344038,
-	.p1_mpwrdlctl =    0x422a423c,
-};
-
-/* microSOM with Quad processor and 2GB memory */
-static const struct mx6_mmdc_calibration mx6q_2g_mmcd_calib = {
-	.p0_mpwldectrl0 =  0x00000000,
-	.p0_mpwldectrl1 =  0x00000000,
-	.p1_mpwldectrl0 =  0x00000000,
-	.p1_mpwldectrl1 =  0x00000000,
-	.p0_mpdgctrl0 =    0x0314031c,
-	.p0_mpdgctrl1 =    0x023e0304,
-	.p1_mpdgctrl0 =    0x03240330,
-	.p1_mpdgctrl1 =    0x03180260,
-	.p0_mprddlctl =    0x3630323c,
-	.p1_mprddlctl =    0x3436283a,
-	.p0_mpwrdlctl =    0x36344038,
-	.p1_mpwrdlctl =    0x422a423c,
-};
-
-/* microSOM with Solo processor and 512MB memory */
-static const struct mx6_mmdc_calibration mx6dl_512m_mmcd_calib = {
-	.p0_mpwldectrl0 = 0x0045004D,
-	.p0_mpwldectrl1 = 0x003A0047,
-	.p0_mpdgctrl0 =   0x023C0224,
-	.p0_mpdgctrl1 =   0x02000220,
-	.p0_mprddlctl =   0x44444846,
-	.p0_mpwrdlctl =   0x32343032,
 };
 
 /* microSOM with Dual lite processor and 1GB memory */
@@ -539,19 +451,6 @@ static struct mx6_ddr3_cfg mem_ddr_2g = {
 	.trasmin   = 3500,
 };
 
-static struct mx6_ddr3_cfg mem_ddr_4g = {
-	.mem_speed = 1600,
-	.density = 4,
-	.width = 16,
-	.banks = 8,
-	.rowaddr = 16,
-	.coladdr = 10,
-	.pagesz = 2,
-	.trcd = 1375,
-	.trcmin = 4875,
-	.trasmin = 3500,
-};
-
 static void ccgr_init(void)
 {
 	struct mxc_ccm_reg *ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
@@ -567,6 +466,7 @@ static void ccgr_init(void)
 
 static void spl_dram_init(int width)
 {
+	printf("spl_dram_init\n");
 	struct mx6_ddr_sysinfo sysinfo = {
 		/* width of data bus: 0=16, 1=32, 2=64 */
 		.dsize = width / 32,
@@ -587,19 +487,22 @@ static void spl_dram_init(int width)
 		.refr = 7,	/* 8 refresh commands per refresh cycle */
 	};
 
-	if (is_mx6dq())
-		mx6dq_dram_iocfg(width, &mx6q_ddr_ioregs, &mx6q_grp_ioregs);
-	else
-		mx6sdl_dram_iocfg(width, &mx6dl_ddr_ioregs, &mx6sdl_grp_ioregs);
+	mx6_dram_cfg(&sysinfo, &mx6dl_1g_mmcd_calib, &mem_ddr_2g);
+	mx6sdl_dram_iocfg(width, &mx6dl_ddr_ioregs, &mx6sdl_grp_ioregs);
 
-	if (is_cpu_type(MXC_CPU_MX6D))
-		mx6_dram_cfg(&sysinfo, &mx6q_1g_mmcd_calib, &mem_ddr_2g);
-	else if (is_cpu_type(MXC_CPU_MX6Q))
-		mx6_dram_cfg(&sysinfo, &mx6q_2g_mmcd_calib, &mem_ddr_4g);
-	else if (is_cpu_type(MXC_CPU_MX6DL))
-		mx6_dram_cfg(&sysinfo, &mx6dl_1g_mmcd_calib, &mem_ddr_2g);
-	else if (is_cpu_type(MXC_CPU_MX6SOLO))
-		mx6_dram_cfg(&sysinfo, &mx6dl_512m_mmcd_calib, &mem_ddr_2g);
+	// if (is_mx6dq())
+	// 	mx6dq_dram_iocfg(width, &mx6q_ddr_ioregs, &mx6q_grp_ioregs);
+	// else
+	// 	mx6sdl_dram_iocfg(width, &mx6dl_ddr_ioregs, &mx6sdl_grp_ioregs);
+
+	// if (is_cpu_type(MXC_CPU_MX6D))
+	// 	mx6_dram_cfg(&sysinfo, &mx6q_1g_mmcd_calib, &mem_ddr_2g);
+	// else if (is_cpu_type(MXC_CPU_MX6Q))
+	// 	mx6_dram_cfg(&sysinfo, &mx6q_2g_mmcd_calib, &mem_ddr_4g);
+	// else if (is_cpu_type(MXC_CPU_MX6DL))
+	// 	mx6_dram_cfg(&sysinfo, &mx6dl_1g_mmcd_calib, &mem_ddr_2g);
+	// else if (is_cpu_type(MXC_CPU_MX6SOLO))
+	// 	mx6_dram_cfg(&sysinfo, &mx6dl_512m_mmcd_calib, &mem_ddr_2g);
 }
 
 void board_init_f(ulong dummy)
@@ -620,10 +523,7 @@ void board_init_f(ulong dummy)
 	preloader_console_init();
 
 	/* DDR initialization */
-	if (is_cpu_type(MXC_CPU_MX6SOLO))
-		spl_dram_init(32);
-	else
-		spl_dram_init(64);
+	spl_dram_init(64);
 
 	/* Clear the BSS. */
 	memset(__bss_start, 0, __bss_end - __bss_start);
