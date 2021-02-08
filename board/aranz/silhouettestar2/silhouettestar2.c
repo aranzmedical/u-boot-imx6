@@ -296,6 +296,8 @@ static bool is_rev_15_som(void)
 static bool has_emmc(void)
 {
 	struct mmc *mmc;
+	mmc = find_mmc_device(0);
+	mmc = find_mmc_device(1);
 	mmc = find_mmc_device(2);
 	if (!mmc)
 		return 0;
@@ -309,7 +311,7 @@ int checkboard(void)
 	if (is_rev_15_som())
 		puts(" (som rev 1.5)\n");
 	else
-		puts("\n");
+		puts(" (som rev 1.3)\n");
 
 	return 0;
 }
@@ -339,25 +341,25 @@ int board_late_init(void)
 
   if (aranzboot1 == 1 && aranzboot2 == 0)
   {
-		puts("Boot: OS1\n");
+		puts("Boot: OS1 [/dev/mmcblk0p2]\n");
     aranzboot = "OS1";
     aranzmmcroot = "/dev/mmcblk0p2\0";
     env_set("mmcpart","2");
   }
   else if (aranzboot1 == 0 && aranzboot2 == 1)
   {
-		puts("Boot: OS2\n");
+		puts("Boot: OS2 [/dev/mmcblk0p3]\n");
     aranzboot = "OS2";
     aranzmmcroot = "/dev/mmcblk0p3\0";
     env_set("mmcpart","3");
   }
   else
-	{
-		puts("Boot: RESCUE\n");
+  {
+    puts("Boot: RESCUE [/dev/mmcblk0p5]\n");
     aranzboot = "RESCUE";
     aranzmmcroot = "/dev/mmcblk0p5\0";
     env_set("mmcpart","5");
-	}
+  }
 
   env_set("aranzboot",aranzboot);
   env_set("aranzmmcroot",aranzmmcroot);
