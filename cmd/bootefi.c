@@ -13,7 +13,7 @@
 #include <efi_loader.h>
 #include <efi_selftest.h>
 #include <errno.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <libfdt_env.h>
 #include <memalign.h>
 #include <asm/global_data.h>
