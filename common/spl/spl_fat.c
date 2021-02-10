@@ -15,7 +15,7 @@
 #include <fat.h>
 #include <errno.h>
 #include <image.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 
 static int fat_registered;
 

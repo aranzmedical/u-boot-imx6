@@ -15,7 +15,7 @@
 #include <pci.h>
 #include <i2c.h>
 #include <miiphy.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <fdt_support.h>
 #include <fsl_mdio.h>
 #include <tsec.h>

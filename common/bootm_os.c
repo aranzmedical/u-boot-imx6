@@ -8,7 +8,7 @@
 #include <common.h>
 #include <bootm.h>
 #include <fdt_support.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <malloc.h>
 #include <vxworks.h>
 

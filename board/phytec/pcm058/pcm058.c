@@ -397,7 +397,7 @@ int board_late_init(void)
 
 #ifdef CONFIG_SPL_BUILD
 #include <spl.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 
 static const struct mx6dq_iomux_ddr_regs mx6_ddr_ioregs = {
 	.dram_sdclk_0 = 0x00000030,

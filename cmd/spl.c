@@ -8,7 +8,7 @@
 #include <common.h>
 #include <command.h>
 #include <cmd_spl.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 

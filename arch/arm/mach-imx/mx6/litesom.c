@@ -77,7 +77,7 @@ int litesom_mmc_init(bd_t *bis)
 #endif
 
 #ifdef CONFIG_SPL_BUILD
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <spl.h>
 #include <asm/arch/mx6-ddr.h>
 

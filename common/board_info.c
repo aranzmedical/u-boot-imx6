@@ -3,7 +3,7 @@
  */
 
 #include <common.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <linux/compiler.h>
 
 int __weak checkboard(void)

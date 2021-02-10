@@ -17,7 +17,7 @@
 #endif
 #include <asm/mmu.h>
 #if defined(CONFIG_OF_LIBFDT)
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #endif
 #if defined(CONFIG_PQ_MDS_PIB)
 #include "../common/pq-mds-pib.h"

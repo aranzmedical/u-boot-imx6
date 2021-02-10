@@ -11,7 +11,7 @@
 #include <errno.h>
 #include <spl.h>
 #include <net.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 

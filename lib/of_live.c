@@ -10,7 +10,7 @@
  */
 
 #include <common.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <of_live.h>
 #include <malloc.h>
 #include <dm/of_access.h>

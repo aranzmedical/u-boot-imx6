@@ -15,7 +15,7 @@
 #include <i2c.h>
 #include <miiphy.h>
 #include <command.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #if defined(CONFIG_PCI)
 #include <pci.h>
 #endif

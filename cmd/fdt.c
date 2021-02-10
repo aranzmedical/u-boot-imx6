@@ -13,7 +13,7 @@
 #include <linux/ctype.h>
 #include <linux/types.h>
 #include <asm/global_data.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <fdt_support.h>
 #include <mapmem.h>
 #include <asm/io.h>

@@ -10,7 +10,7 @@
 #include <common.h>
 #include <dm.h>
 #include <dm/lists.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <linux/arm-smccc.h>
 #include <linux/errno.h>
 #include <linux/printk.h>

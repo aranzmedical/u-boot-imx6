@@ -5,7 +5,7 @@
  */
 
 #include <common.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <fdt_support.h>
 #include <asm/mp.h>
 

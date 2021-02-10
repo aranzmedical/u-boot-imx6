@@ -11,7 +11,7 @@
 #include <asm/immap_85xx.h>
 #include <asm/io.h>
 #include <miiphy.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <fdt_support.h>
 #include <fsl_mdio.h>
 #include <tsec.h>

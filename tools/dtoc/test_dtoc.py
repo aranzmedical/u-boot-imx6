@@ -33,7 +33,7 @@ HEADER = '''/*
  */
 
 #include <stdbool.h>
-#include <linux/libfdt.h>'''
+#include <libfdt.h>'''
 
 C_HEADER = '''/*
  * DO NOT MODIFY

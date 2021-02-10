@@ -19,7 +19,7 @@
 #endif
 
 #if defined(CONFIG_OF_LIBFDT)
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #endif
 
 DECLARE_GLOBAL_DATA_PTR;

@@ -15,7 +15,7 @@
 #include <common.h>
 #include <mpc83xx.h>
 #include <spi.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 /** CPLD contains the info about:

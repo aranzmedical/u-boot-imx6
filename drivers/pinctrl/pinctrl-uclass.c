@@ -5,7 +5,7 @@
  */
 
 #include <common.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <linux/err.h>
 #include <linux/list.h>
 #include <dm.h>

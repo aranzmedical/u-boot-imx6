@@ -7,7 +7,7 @@
 #include <common.h>
 #include <dm.h>
 #include <dm/pinctrl.h>
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <asm/io.h>
 
 DECLARE_GLOBAL_DATA_PTR;

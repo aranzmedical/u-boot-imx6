@@ -28,7 +28,7 @@
 #include <asm/io.h>
 
 #if defined(CONFIG_OF_LIBFDT)
-#include <linux/libfdt.h>
+#include <libfdt.h>
 #include <fdt_support.h>
 #endif
 
