@@ -24,9 +24,6 @@ struct mmc *find_mmc_device(int dev_num)
 
 		if (m->block_dev.devnum == dev_num)
 		{
-			#if !defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_LIBCOMMON_SUPPORT)
-				printf("MMC Device %d Found\n", dev_num);
-			#endif
 			return m;
 		}
 			

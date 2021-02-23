@@ -316,17 +316,26 @@ int checkboard(void)
 	return 0;
 }
 
+#define SNVS_LPPGDR_INIT 0x41736166
+#define snvs_hpcomr *((u32*)(SNVS_BASE_ADDR + 0x04))
+#define snvs_lpsr *((u32*)(SNVS_BASE_ADDR + 0x4C))
+#define snvs_lppgdr *((u32*)(SNVS_BASE_ADDR + 0x64))
+
 int board_late_init(void)
 {
   char const *aranzboot;
   char const *aranzmmcroot;
 
+  snvs_hpcomr |= 0x80000000;
+  snvs_lppgdr = SNVS_LPPGDR_INIT;
+  snvs_lpsr = 0xffffffff;
+
   env_set("board_name", "SILHOUETTESTAR2");
 
-	if (is_mx6dq())
-		env_set("board_rev", "MX6Q");
-	else
-		env_set("board_rev", "MX6DL");
+  if (is_mx6dq())
+    env_set("board_rev", "MX6Q");
+  else
+    env_set("board_rev", "MX6DL");
 
    /* Detect Boot pins */
   SETUP_IOMUX_PADS(boot_sense);

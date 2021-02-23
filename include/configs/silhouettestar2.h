@@ -65,16 +65,11 @@
   "loadzImagefile=load mmc ${mmcdev}:1 ${loadaddr} zImage;\0" \
   "boot_aranz=" \
     "setenv bootargs console=${console},${baudrate} quiet coherent_pool=180M root=${mmcroot} rootwait ro rootfstype=ext4 nohlt; " \
-    "if test ${board_rev} = MX6DL; then " \
-      "setenv fdt_prefix imx6dl; " \
-    "else " \
-      "setenv fdt_prefix imx6q; " \
-    "fi; " \
     "if test ${som_rev} = V15; then " \
 			"setenv fdtsuffix -som-v15; fi; " \
 		"if test ${has_emmc} = yes; then " \
 			"setenv emmcsuffix -emmc; fi; " \
-    "setenv fdt_file ${fdt_prefix}-silhouettestar{emmcsuffix}${fdtsuffix}.dtb;" \
+    "setenv fdt_file imx6dl-silhouettestar_1.5.dtb;" \
     "if run loadftdfilefromboot; then " \
       "echo Loaded Devicetree from mmc${mmcdev}:${mmcpart} /boot/${fdt_file};" \
     "else " \
